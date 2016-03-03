@@ -2,6 +2,7 @@
 """Common Optimization algorithms with regularizations."""
 import math
 import ctypes
+import logging
 from .base import _LIB, check_call
 from .base import c_array, mx_uint, mx_float, c_str
 from .base import OptimizerHandle, OptimizerCreator
@@ -104,6 +105,7 @@ class Optimizer(object):
         self.num_update = begin_num_update
         self._index_update_count = {}
         self.clip_gradient = clip_gradient
+        self.clip_gamma = False
 
         if param_idx2name is None:
             param_idx2name = {}
@@ -121,6 +123,15 @@ class Optimizer(object):
 
     def update(self, index, weight, grad, state):
         """Update the parameters. override in implementations"""
+
+    def update_for_constraint(self, index, weight, grad, state):
+        """Update the parameters for constraint."""
+
+        if self.clip_gamma:
+            param_name = self.param_names[index]
+            if param_name.startswith('leakyrelu') or param_name.endswith('relu_gamma') \
+                or param_name.endswith('act_gamma'):
+                weight[:] = clip(weight, 0.0, 1.0)
 
     # pylint: disable=no-self-use
     def set_lr_scale(self, args_lrscale):
@@ -144,6 +155,8 @@ class Optimizer(object):
                 if k.endswith('_lr_mult'):
                     self.lr_mult[k[:-len('_lr_mult')]] = float(v)
         self.lr_mult.update(args_lr_mult)
+        self.lr_mult = {k: v for k, v in self.lr_mult.items() if k in set(self.idx2name.values())}
+        logging.info('lr_mult: %s', sorted(self.lr_mult.items()))
 
     def set_wd_mult(self, args_wd_mult):
         """Set individual weight decay multipler for parameters.
@@ -167,6 +180,8 @@ class Optimizer(object):
                 if k.endswith('_wd_mult'):
                     self.wd_mult[k[:-len('_wd_mult')]] = float(v)
         self.wd_mult.update(args_wd_mult)
+        self.wd_mult = {k: v for k, v in self.wd_mult.items() if k in set(self.idx2name.values())}
+        logging.info('wd_mult: %s', sorted(self.wd_mult.items()))
 
     def _update_count(self, index):
         """
@@ -307,7 +322,6 @@ class SGD(Optimizer):
         else:
             assert self.momentum == 0.0
             weight[:] += -lr * (grad + wd * weight)
-
 
 @register
 class NAG(SGD):
@@ -821,4 +835,5 @@ def get_updater(optimizer):
         if index not in states:
             states[index] = optimizer.create_state(index, weight)
         optimizer.update(index, weight, grad, states[index])
+        optimizer.update_for_constraint(index, weight, grad, states[index])
     return updater

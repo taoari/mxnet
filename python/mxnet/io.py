@@ -328,7 +328,9 @@ class NDArrayIter(DataIter):
     batch_size: int
         Batch Size
     shuffle: bool
-        Whether to shuffle the data
+        Whether to shuffle the data (initial)
+    shuffle_on_reset: bool
+        Whether to shuffle the data (when reset is called)
     last_batch_handle: 'pad', 'discard' or 'roll_over'
         How to handle the last batch
     Note
@@ -337,7 +339,8 @@ class NDArrayIter(DataIter):
     the size of data does not match batch_size. Roll over is intended
     for training and can cause problems if used for prediction.
     """
-    def __init__(self, data, label=None, batch_size=1, shuffle=False, last_batch_handle='pad'):
+    def __init__(self, data, label=None, batch_size=1, shuffle=False, shuffle_on_reset=False,
+                 last_batch_handle='pad'):
         # pylint: disable=W0201
 
         super(NDArrayIter, self).__init__()
@@ -346,18 +349,17 @@ class NDArrayIter(DataIter):
         self.label = _init_data(label, allow_empty=True, default_name='softmax_label')
 
         # shuffle data
-        if shuffle:
+        self.shuffle = shuffle
+        self.shuffle_on_reset = shuffle_on_reset
+        if self.shuffle:
             idx = np.arange(self.data[0][1].shape[0])
             np.random.shuffle(idx)
             self.data = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.data]
             self.label = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.label]
 
-        self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
-        self.num_source = len(self.data_list)
-
         # batching
         if last_batch_handle == 'discard':
-            new_n = self.data_list[0].shape[0] - self.data_list[0].shape[0] % batch_size
+            new_n = self.data[0][1].shape[0] - self.data[0][1].shape[0] % batch_size
             data_dict = OrderedDict(self.data)
             label_dict = OrderedDict(self.label)
             for k, _ in self.data:
@@ -366,6 +368,9 @@ class NDArrayIter(DataIter):
                 label_dict[k] = label_dict[k][:new_n]
             self.data = data_dict.items()
             self.label = label_dict.items()
+
+        self.data_list = [x[1] for x in self.data] + [x[1] for x in self.label]
+        self.num_source = len(self.data_list)
         self.num_data = self.data_list[0].shape[0]
         assert self.num_data >= batch_size, \
             "batch_size need to be smaller than data size."
@@ -389,6 +394,13 @@ class NDArrayIter(DataIter):
         self.cursor = -self.batch_size
 
     def reset(self):
+        # shuffle data
+        if self.shuffle_on_reset:
+            idx = np.arange(self.data[0][1].shape[0])
+            np.random.shuffle(idx)
+            self.data = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.data]
+            self.label = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.label]
+
         if self.last_batch_handle == 'roll_over' and self.cursor > self.num_data:
             self.cursor = -self.batch_size + (self.cursor%self.num_data)%self.batch_size
         else:
