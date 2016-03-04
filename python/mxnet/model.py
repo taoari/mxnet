@@ -466,7 +466,8 @@ class FeedForward(BASE_ESTIMATOR):
         if self.arg_params:
             arg_names = set(self.symbol.list_arguments())
             arg_names_not_used = set(self.arg_params.keys()).difference(arg_names)
-            arg_names_reinit = set(arg_names).difference(self.arg_params.keys() + ['data', 'softmax_label'])
+            arg_names_reinit = set(arg_names).difference(list(self.arg_params.keys()) + \
+                ['data', 'softmax_label'])
             for name in arg_names_not_used:
                 logging.info('Skip parameter arg:%s', name)
             for name in arg_names_reinit:
@@ -488,7 +489,6 @@ class FeedForward(BASE_ESTIMATOR):
                 arg_names = set(self.symbol.list_arguments())
                 self.arg_params = {k : v for k, v in self.arg_params.items()
                                    if k in arg_names}
-                
             if self.aux_params:
                 aux_names = set(self.symbol.list_auxiliary_states())
                 self.aux_params = {k : v for k, v in self.aux_params.items()
