@@ -56,6 +56,10 @@ def proto_parser():
                         help='do checkpoint every <checkpoint-epoch> epochs')
     parser.add_argument('--eval-epoch', type=int, default=1,
                         help='do evaluation every <checkpoint-epoch> epochs')
+    parser.add_argument('--momentum', type=float, default=0.9,
+                        help='momentum')
+    parser.add_argument('--wd', type=float, default=0.00001,
+                        help='weight decay')
     return parser
     
 def dict_to_arg_list(params):
