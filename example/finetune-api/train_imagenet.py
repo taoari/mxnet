@@ -15,14 +15,10 @@ def parse_args():
                         help = 'the cnn to use')
     parser.add_argument('--gpus', type=str,
                         help='the gpus will be used, e.g "0,1,2,3"')
-    parser.add_argument('--dataset', type=str, default='imagenet',
-                        help='dataset')
     parser.add_argument('--load-epoch', type=int,
                         help="load the model on an epoch using the model-prefix")
     parser.add_argument('--finetune-from', type=str,
                         help="finetune from model")
-    parser.add_argument('--batch-size', type=int, default=32,
-                        help='the batch size')
     return parser.parse_args()
 
 
