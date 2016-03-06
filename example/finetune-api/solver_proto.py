@@ -48,6 +48,10 @@ def proto_parser():
                         help="validation dataset name")
     parser.add_argument('--data-shape', type=int, default=224,
                         help='set image\'s shape')
+    parser.add_argument('--display', type=int, default=50,
+                        help='display speedometer per display iterations')
+    parser.add_argument('--eval-metric', type=str, default='acc,mse',
+                        help='evaluation metrics, comma separated list')
     return parser
     
 def dict_to_arg_list(params):
