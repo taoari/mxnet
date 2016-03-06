@@ -54,6 +54,8 @@ def proto_parser():
                         help='evaluation metrics, comma separated list')
     parser.add_argument('--checkpoint-epoch', type=int, default=1,
                         help='do checkpoint every <checkpoint-epoch> epochs')
+    parser.add_argument('--eval-epoch', type=int, default=1,
+                        help='do evaluation every <checkpoint-epoch> epochs')
     return parser
     
 def dict_to_arg_list(params):

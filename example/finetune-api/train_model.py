@@ -136,6 +136,7 @@ def fit(args, network, data_loader):
         X                  = train,
         eval_data          = val,
         kvstore            = kv,
-        eval_metric = args.eval_metric.split(',') if 'eval_metric' in args else 'acc',
+        eval_epoch         = args.eval_epoch if 'eval_epoch' in args else 1,
+        eval_metric        = args.eval_metric.split(',') if 'eval_metric' in args else 'acc',
         batch_end_callback = mx.callback.Speedometer(args.batch_size, args.display if 'display' in args else 50),
         epoch_end_callback = checkpoint)
