@@ -106,8 +106,8 @@ def fit(args, network, data_loader):
     optimizer = mx.optimizer.create('sgd',
         rescale_grad=(1.0/batch_size),
         learning_rate      = args.lr,
-        momentum           = 0.9,
-        wd                 = 0.00001,)
+        momentum           = args.momentum if 'momentum' in args else 0.0,
+        wd                 = args.wd if 'wd' in args else 0.00001,)
 
     # lr_scale
     if args.finetune_from is not None:
