@@ -1,4 +1,5 @@
-data-dir: mnist/
+data-dir: mnist
+dataset: mnist
 num_classes: 10
 num_examples: 60000
 batch_size: 128
