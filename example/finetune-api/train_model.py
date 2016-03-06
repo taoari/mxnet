@@ -86,9 +86,15 @@ def fit(args, network, data_loader):
         model_args['epoch_size'] = epoch_size
 
     if 'lr_factor' in args and args.lr_factor < 1:
-        model_args['lr_scheduler'] = mx.lr_scheduler.FactorScheduler(
-            step = max(int(epoch_size * args.lr_factor_epoch), 1),
-            factor = args.lr_factor)
+        lr_factor_epoch = [float(_fe) for _fe in args.lr_factor_epoch.split(',')]
+        if len(lr_factor_epoch) == 1:
+            model_args['lr_scheduler'] = mx.lr_scheduler.FactorScheduler(
+                step = max(int(epoch_size * lr_factor_epoch[0]), 1),
+                factor = args.lr_factor)
+        else:
+            model_args['lr_scheduler'] = mx.lr_scheduler.MultiFactorScheduler(
+                step = [max(int(epoch_size * _f), 1) for _f in lr_factor_epoch],
+                factor = args.lr_factor)            
 
     if 'clip_gradient' in args and args.clip_gradient is not None:
         model_args['clip_gradient'] = args.clip_gradient
