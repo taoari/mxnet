@@ -52,6 +52,8 @@ def proto_parser():
                         help='display speedometer per display iterations')
     parser.add_argument('--eval-metric', type=str, default='acc,mse',
                         help='evaluation metrics, comma separated list')
+    parser.add_argument('--checkpoint-epoch', type=int, default=1,
+                        help='do checkpoint every <checkpoint-epoch> epochs')
     return parser
     
 def dict_to_arg_list(params):
