@@ -14,8 +14,8 @@ def proto_parser():
                         help='the initial learning rate')
     parser.add_argument('--lr-factor', type=float, default=1,
                         help='times the lr with a factor for every lr-factor-epoch epoch')
-    parser.add_argument('--lr-factor-epoch', type=float, default=1,
-                        help='the number of epoch to factor the lr, could be .5')
+    parser.add_argument('--lr-factor-epoch', type=str, default='1.',
+                        help='the numbers of epoch to factor the lr, could be a float or comma seperated floats')
     parser.add_argument('--clip-gradient', type=float, default=5.,
                         help='clip min/max gradient to prevent extreme value')
     parser.add_argument('--num-epochs', type=int, default=20,
