@@ -11,3 +11,4 @@ num_epochs: 10
 kv_store: local
 
 model_prefix: mnist_lenet
+checkpoint_epoch: 5
