@@ -12,3 +12,4 @@ kv_store: local
 
 model_prefix: mnist_lenet
 checkpoint_epoch: 5
+eval_epoch: 5
