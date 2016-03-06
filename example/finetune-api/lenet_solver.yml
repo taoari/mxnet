@@ -4,6 +4,8 @@ num_examples: 60000
 batch_size: 128
 
 lr: 0.01
+lr_factor: 0.9
+lr_factor_epoch: 2
 momentum: 0.8
 wd: 0.00005
 

@@ -107,7 +107,10 @@ def fit(args, network, data_loader):
         rescale_grad=(1.0/batch_size),
         learning_rate      = args.lr,
         momentum           = args.momentum if 'momentum' in args else 0.0,
-        wd                 = args.wd if 'wd' in args else 0.00001,)
+        wd                 = args.wd if 'wd' in args else 0.00001,
+        clip_gradient = model_args['clip_gradient'] if 'clip_gradient' in model_args else None,
+        lr_scheduler = model_args['lr_scheduler'] if 'lr_scheduler' in model_args else None,
+        arg_names = network.list_arguments())
 
     # lr_scale
     if args.finetune_from is not None:
