@@ -50,7 +50,7 @@ def proto_parser():
                         help='set image\'s shape')
     parser.add_argument('--display', type=int, default=50,
                         help='display speedometer per display iterations')
-    parser.add_argument('--eval-metric', type=str, default='acc,mse',
+    parser.add_argument('--eval-metric', type=str, default='acc,ce',
                         help='evaluation metrics, comma separated list')
     parser.add_argument('--checkpoint-epoch', type=int, default=1,
                         help='do checkpoint every <checkpoint-epoch> epochs')
@@ -64,7 +64,7 @@ def proto_parser():
     
 def dict_to_arg_list(params):
     arg_list = []
-    for k, v in params.iteritems():
+    for k, v in params.items():
         k = k.replace('_', '-')
         if v is None:
             pass
@@ -84,7 +84,7 @@ def parse_args_from_file(solver_yml):
         with open(solver_yml) as f:
             solver_params = yaml.load(f)
         args = parser.parse_args(dict_to_arg_list(solver_params),
-            namespace=argparse.Namespace(**{k:v for k,v in solver_params.iteritems() if v is None}))
+            namespace=argparse.Namespace(**{k:v for k,v in solver_params.items() if v is None}))
     else:
         args = parser.parse_args([])
     return args
@@ -92,7 +92,7 @@ def parse_args_from_file(solver_yml):
 def namespace_update(ns1, ns2, exceptions=None):
     # make a copy
     dict1 = vars(ns1)
-    dict1.update({k:v for k, v in vars(ns2).iteritems() if k not in exceptions})
+    dict1.update({k:v for k, v in vars(ns2).items() if k not in exceptions})
     ns = argparse.Namespace(**dict1)
     return ns
 
@@ -119,4 +119,4 @@ if __name__ == '__main__':
     # print args
     
     args = update_args(args, args.solver)
-    print args
+    print(args)
