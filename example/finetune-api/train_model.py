@@ -49,8 +49,29 @@ def fit(args, network, data_loader):
                       'aux_params' : tmp.aux_params} 
 
     # save model
-    checkpoint = None if model_prefix is None else mx.callback.do_checkpoint(model_prefix)
-
+    from mxnet.model import save_checkpoint
+    
+    def do_checkpoint(prefix, frequent=1):
+        """Callback to checkpoint the model to prefix every epoch.
+    
+        Parameters
+        ----------
+        prefix : str
+            The file prefix to checkpoint to
+    
+        Returns
+        -------
+        callback : function
+            The callback function that can be passed as iter_end_callback to fit.
+        """
+        def _callback(iter_no, sym, arg, aux):
+            """The checkpoint function."""
+            if (iter_no + 1) % frequent == 0:
+                save_checkpoint(prefix, iter_no + 1, sym, arg, aux)
+        return _callback
+        
+    checkpoint = None if model_prefix is None else do_checkpoint(model_prefix, args.checkpoint_epoch if 'checkpoint_epoch' in args else 1)
+    
     # data
     (train, val) = data_loader(args, kv)
 
