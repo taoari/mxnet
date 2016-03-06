@@ -1,0 +1,13 @@
+data-dir: mnist/
+num_classes: 10
+num_examples: 60000
+batch_size: 128
+
+lr: 0.01
+# momentum: 0.9
+# wd: 0.00001
+
+num_epochs: 10
+kv_store: local
+
+model_prefix: mnist_lenet
