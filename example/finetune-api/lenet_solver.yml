@@ -1,3 +1,5 @@
+network: lenet
+
 data-dir: mnist/
 dataset: mnist
 num_classes: 10
