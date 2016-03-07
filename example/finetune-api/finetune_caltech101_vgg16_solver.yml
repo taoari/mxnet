@@ -1,0 +1,20 @@
+network: vgg16
+
+data-dir: caltech101
+dataset: caltech101
+num_classes: 102
+num_examples: 3060
+batch_size: 20
+
+lr: 0.0005
+lr_factor: 0.1
+lr_factor_epoch: 320
+momentum: 0.9
+wd: 0.0005
+
+num_epochs: 800
+kv_store: local
+
+model_prefix: finetune_caltech101_vgg16
+checkpoint_epoch: 80
+eval_epoch: 16
