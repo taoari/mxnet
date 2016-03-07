@@ -19,6 +19,8 @@ def parse_args():
                         help="load the model on an epoch using the model-prefix")
     parser.add_argument('--finetune-from', type=str,
                         help="finetune from model")
+    parser.add_argument('--log-file', type=str, default='auto',
+                        help='the name of log file')
     return parser.parse_args()
 
 
