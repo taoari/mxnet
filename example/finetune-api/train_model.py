@@ -3,6 +3,29 @@ import mxnet as mx
 import logging
 import os
 
+def init_logger(log_file, head='%(asctime)-15s] %(message)s'):
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    # create console handler and set level to info
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter(head)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    # auto time stamp the log file name
+    if log_file == 'auto':
+        from datetime import datetime
+        log_file = str(datetime.now()).replace(' ', 'T').replace(':', '-') + '.log.txt'
+
+    # create debug file handler and set level to debug
+    handler = logging.FileHandler(log_file, "w")
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(head)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
 def fit(args, network, data_loader):
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
@@ -10,22 +33,17 @@ def fit(args, network, data_loader):
     # logging
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
     if 'log_file' in args and args.log_file is not None:
-        log_file = args.log_file
-        log_dir = args.log_dir
-        log_file_full_name = os.path.join(log_dir, log_file)
-        if not os.path.exists(log_dir):
-            os.mkdir(log_dir)
-        logger = logging.getLogger()
-        handler = logging.FileHandler(log_file_full_name)
-        formatter = logging.Formatter(head)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.setLevel(logging.DEBUG)
-        logger.info('start with arguments %s', args)
+        init_logger(args.log_file, head)
+        logging.info('start with arguments %s', args)
     else:
         logging.basicConfig(level=logging.DEBUG, format=head)
         logging.info('start with arguments %s', args)
-        logger = logging
+
+    try:
+        import socket
+        logging.info('Running on machine: %s', socket.gethostname())
+    except Exception:
+        pass
 
     # load model
     model_prefix = args.model_prefix

@@ -1,10 +1,10 @@
 network: vgg16
 
-data-dir: caltech101
+data_dir: caltech101
 dataset: caltech101
 num_classes: 102
 num_examples: 3060
-batch_size: 20
+batch_size: 25
 
 lr: 0.0005
 lr_factor: 0.1
