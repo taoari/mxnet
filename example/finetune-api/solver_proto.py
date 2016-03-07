@@ -3,9 +3,8 @@ import yaml
 
 def proto_parser():
     parser = argparse.ArgumentParser(description='train an image classifer on imagenet')
-#    parser.add_argument('--network', type=str, default='inception-bn',
-#                        choices = ['alexnet', 'vgg', 'googlenet', 'inception-bn', 'inception-bn-full', 'inception-v3', 'vgg16'],
-#                        help = 'the cnn to use')
+    parser.add_argument('--network', type=str, default='inception-bn',
+                        help = 'the cnn to use')
     parser.add_argument('--data-dir', type=str,
                         help='the input data directory')
     parser.add_argument('--model-prefix', type=str,
