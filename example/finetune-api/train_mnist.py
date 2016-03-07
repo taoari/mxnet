@@ -89,9 +89,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description='train an image classifer on mnist')
     parser.add_argument('--solver', type=str,
                         help = 'solver configuration file in yaml format')
-    parser.add_argument('--network', type=str, default='mlp',
-                        choices = ['mlp', 'lenet'],
-                        help = 'the cnn to use')
+#    parser.add_argument('--network', type=str, default='mlp',
+#                        choices = ['mlp', 'lenet'],
+#                        help = 'the cnn to use')
     parser.add_argument('--gpus', type=str,
                         help='the gpus will be used, e.g "0,1,2,3"')
     parser.add_argument('--load-epoch', type=int,
