@@ -37,10 +37,10 @@ def proto_parser():
                         help='the number of classes')
     parser.add_argument('--dataset', type=str, default='imagenet',
                         help='dataset')
-    parser.add_argument('--log-file', type=str, 
+    parser.add_argument('--log-file', type=str, default='auto',
     		    help='the name of log file')
-    parser.add_argument('--log-dir', type=str, default="/tmp/",
-                        help='directory of the log file')
+#    parser.add_argument('--log-dir', type=str, default="/tmp/",
+#                        help='directory of the log file')
     parser.add_argument('--train-dataset', type=str, default="train.rec",
                         help='train dataset name')
     parser.add_argument('--val-dataset', type=str, default="val.rec",
