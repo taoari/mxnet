@@ -48,18 +48,23 @@ if __name__ == '__main__':
             rand_mirror = True,
             num_parts   = kv.num_workers,
             part_index  = kv.rank)
-    
-        val = mx.io.ImageRecordIter(
-            path_imgrec = os.path.join(args.data_dir, args.val_dataset),
-            mean_r      = 123.68,
-            mean_g      = 116.779,
-            mean_b      = 103.939,
-            rand_crop   = False,
-            rand_mirror = False,
-            data_shape  = data_shape,
-            batch_size  = args.batch_size,
-            num_parts   = kv.num_workers,
-            part_index  = kv.rank)
+
+        if args.val_dataset:
+            val = mx.io.ImageRecordIter(
+                path_imgrec = os.path.join(args.data_dir, args.val_dataset),
+                mean_r      = 123.68,
+                mean_g      = 116.779,
+                mean_b      = 103.939,
+                rand_crop   = False,
+                rand_mirror = False,
+                data_shape  = data_shape,
+                batch_size  = args.batch_size,
+                num_parts   = kv.num_workers,
+                part_index  = kv.rank)
+        else:
+            import logging
+            logging.info('Valication dataset is not provided, hence evaluation is disabled.')
+            val = None
     
         return (train, val)
     
