@@ -73,14 +73,19 @@ def get_iterator(data_shape):
             num_parts   = kv.num_workers,
             part_index  = kv.rank)
 
-        val = mx.io.MNISTIter(
-            image       = data_dir + "t10k-images-idx3-ubyte",
-            label       = data_dir + "t10k-labels-idx1-ubyte",
-            input_shape = data_shape,
-            batch_size  = args.batch_size,
-            flat        = flat,
-            num_parts   = kv.num_workers,
-            part_index  = kv.rank)
+        if args.val_dataset:
+            val = mx.io.MNISTIter(
+                image       = data_dir + "t10k-images-idx3-ubyte",
+                label       = data_dir + "t10k-labels-idx1-ubyte",
+                input_shape = data_shape,
+                batch_size  = args.batch_size,
+                flat        = flat,
+                num_parts   = kv.num_workers,
+                part_index  = kv.rank)
+        else:
+            import logging
+            logging.info('Valication dataset is not provided, hence evaluation is disabled.')
+            val = None
 
         return (train, val)
     return get_iterator_impl
