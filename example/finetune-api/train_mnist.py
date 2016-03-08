@@ -7,6 +7,7 @@ import train_model
 def _download(data_dir):
     if not os.path.isdir(data_dir):
         os.system("mkdir " + data_dir)
+    cwd = os.getcwd()
     os.chdir(data_dir)
     if (not os.path.exists('train-images-idx3-ubyte')) or \
        (not os.path.exists('train-labels-idx1-ubyte')) or \
@@ -14,7 +15,7 @@ def _download(data_dir):
        (not os.path.exists('t10k-labels-idx1-ubyte')):
         os.system("wget http://webdocs.cs.ualberta.ca/~bx3/data/mnist.zip")
         os.system("unzip -u mnist.zip; rm mnist.zip")
-    os.chdir("..")
+    os.chdir(cwd)
 
 def get_mlp(dataset='mnist', num_classes=10):
     """
