@@ -38,7 +38,7 @@ if __name__ == '__main__':
     def get_iterator(args, kv):
         data_shape = (3, args.data_shape, args.data_shape)
         train = mx.io.ImageRecordIter(
-            path_imgrec = os.path.join(args.data_dir, args.train_dataset),
+            path_imgrec = os.path.abspath(os.path.join(args.data_dir, args.train_dataset)),
             mean_r      = 123.68,
             mean_g      = 116.779,
             mean_b      = 103.939,
@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
         if args.val_dataset:
             val = mx.io.ImageRecordIter(
-                path_imgrec = os.path.join(args.data_dir, args.val_dataset),
+                path_imgrec = os.path.abspath(os.path.join(args.data_dir, args.val_dataset)),
                 mean_r      = 123.68,
                 mean_g      = 116.779,
                 mean_b      = 103.939,
