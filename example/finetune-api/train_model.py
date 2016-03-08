@@ -59,9 +59,10 @@ def fit(args, network, data_loader):
 
     if args.finetune_from is not None:
         assert args.load_epoch is None
-        finetune_from_prefix, finetune_from_epoch = args.finetune_from.rsplit('-', 1)
+        assert args.finetune_from.endswith('.params')
+        finetune_from_prefix, finetune_from_epoch = args.finetune_from[:-len('.params')].rsplit('-', 1)
         finetune_from_epoch = int(finetune_from_epoch)
-        logger.info('finetune from %s at epoch %d', finetune_from_prefix, finetune_from_epoch)
+        logging.info('finetune from %s', args.finetune_from)
         tmp = mx.model.FeedForward.load(finetune_from_prefix, finetune_from_epoch)
         model_args = {'arg_params' : tmp.arg_params,
                       'aux_params' : tmp.aux_params} 
@@ -146,7 +147,7 @@ def fit(args, network, data_loader):
             if args.dataset in name:
                 lr_scale[i] = args.finetune_lr_scale
         optimizer.set_lr_scale(lr_scale)
-        logger.info('lr_scale: %s', {net_args[i]: s for i,s in lr_scale.items()})
+        logging.info('lr_scale: %s', {net_args[i]: s for i,s in lr_scale.items()})
 
     model = mx.model.FeedForward(
         ctx                = devs,
