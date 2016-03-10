@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import find_mxnet
 import mxnet as mx
 import logging
@@ -17,8 +20,6 @@ def parse_args():
                         help='the gpus will be used, e.g "0,1,2,3"')
     parser.add_argument('--load-epoch', type=int,
                         help="load the model on an epoch using the model-prefix")
-    parser.add_argument('--finetune-from', type=str,
-                        help="finetune from model")
     parser.add_argument('--log-file', type=str, default='auto',
                         help='the name of log file')
     return parser.parse_args()
