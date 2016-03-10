@@ -21,8 +21,8 @@ def proto_parser():
                         help='the number of training epochs')
 #    parser.add_argument('--load-epoch', type=int,
 #                        help="load the model on an epoch using the model-prefix")
-#    parser.add_argument('--finetune-from', type=str,
-#                        help="finetune from model")
+    parser.add_argument('--finetune-from', type=str,
+                        help="finetune from model")
     parser.add_argument('--finetune-lr-scale', type=float, default=10,
                         help="finetune layer lr_scale")
     parser.add_argument('--batch-size', type=int, default=32,
