@@ -278,7 +278,10 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
                 break
 
         # logging learning rate
-        logger.info('Epoch[%d] lr = %f', epoch, optimizer.lr_scheduler(optimizer.num_update))
+        if optimizer.lr_scheduler:
+            logger.info('Epoch[%d] lr = %f', epoch, optimizer.lr_scheduler(optimizer.num_update))
+        else:
+            logger.info('Epoch[%d] lr = %f', epoch, optimizer.lr)
 
         if not isinstance(eval_metric, list):
             name, value = eval_metric.get()
