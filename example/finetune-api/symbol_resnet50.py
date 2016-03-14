@@ -3,7 +3,7 @@ import mxnet as mx
 
 def get_symbol(num_classes=1000, dataset='imagenet'):
 	data = mx.symbol.Variable(name="data")
-	conv1 = mx.symbol.Convolution(name='conv1', data=data , num_filter=64, pad=(3,3), kernel=(7,7), stride=(2,2), no_bias=False)
+	conv1 = mx.symbol.Convolution(name='conv1', data=data , num_filter=64, pad=(3,3), kernel=(7,7), stride=(2,2), no_bias=True)
 	bn_conv1 = mx.symbol.BatchNorm(name='bn_conv1', data=conv1 )
 	conv1_relu = mx.symbol.Activation(name='conv1_relu', data=bn_conv1 , act_type='relu')
 	pool1 = mx.symbol.Pooling(name='pool1', data=conv1_relu , pad=(0,0), kernel=(3,3), stride=(2,2), pool_type='max')
