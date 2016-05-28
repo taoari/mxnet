@@ -280,6 +280,12 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             if epoch_size is None or nbatch >= epoch_size:
                 break
 
+        # logging learning rate
+        if optimizer.lr_scheduler:
+            logger.info('Epoch[%d] lr = %f', epoch, optimizer.lr_scheduler(optimizer.num_update))
+        else:
+            logger.info('Epoch[%d] lr = %f', epoch, optimizer.lr)
+
         toc = time.time()
         logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
 
