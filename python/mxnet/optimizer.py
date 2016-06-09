@@ -2,6 +2,7 @@
 """Common Optimization algorithms with regularizations."""
 import math
 import ctypes
+import logging
 from .base import _LIB, check_call
 from .base import c_array, mx_uint, mx_float, c_str
 from .base import OptimizerHandle, OptimizerCreator
@@ -144,6 +145,7 @@ class Optimizer(object):
                 if k.endswith('_lr_mult'):
                     self.lr_mult[k[:-len('_lr_mult')]] = float(v)
         self.lr_mult.update(args_lr_mult)
+        logging.info('lr_mult: %s', self.lr_mult)
 
     def set_wd_mult(self, args_wd_mult):
         """Set individual weight decay multipler for parameters.
@@ -167,6 +169,7 @@ class Optimizer(object):
                 if k.endswith('_wd_mult'):
                     self.wd_mult[k[:-len('_wd_mult')]] = float(v)
         self.wd_mult.update(args_wd_mult)
+        logging.info('wd_mult: %s', self.wd_mult)
 
     def _update_count(self, index):
         """
