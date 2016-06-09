@@ -33,6 +33,20 @@ def get_mlp(dataset='mnist', num_classes=10):
     mlp  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
     return mlp
 
+def get_mlp_finetune(dataset='mnist', num_classes=10):
+    """
+    multi-layer perceptron
+    """
+    data = mx.symbol.Variable('data')
+    fc1  = mx.symbol.FullyConnected(data = data, name='fc1', num_hidden=128)
+    act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
+    fc2  = mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64)
+    act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
+    fc3  = mx.symbol.FullyConnected(data = act2, name='fc3_mnist', num_hidden=10,
+        attr={'lr_mult': '10'})
+    mlp  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
+    return mlp
+
 def get_lenet(dataset='mnist', num_classes=10):
     """
     LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
@@ -119,6 +133,9 @@ if __name__ == '__main__':
     if args.network == 'mlp':
         data_shape = (784, )
         net = get_mlp(args.dataset, args.num_classes)
+    elif args.network == 'mlp_finetune':
+        data_shape = (784, )
+        net = get_mlp_finetune(args.dataset, args.num_classes)
     else:
         data_shape = (1, 28, 28)
         net = get_lenet(args.dataset, args.num_classes)
