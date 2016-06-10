@@ -41,7 +41,10 @@ def get_symbol(num_classes=1000, dataset='imagenet'):
 	fc7 = mx.symbol.FullyConnected(name='fc7', data=drop6 , num_hidden=4096, no_bias=False)
 	relu7 = mx.symbol.Activation(name='relu7', data=fc7 , act_type='relu')
 	drop7 = mx.symbol.Dropout(name='drop7', data=relu7 , p=0.500000)
-	fc8 = mx.symbol.FullyConnected(name='fc8' if dataset == 'imagenet' else 'fc8_%s' % dataset, data=drop7 , num_hidden=num_classes, no_bias=False)
+	if dataset == 'imagenet':
+		fc8 = mx.symbol.FullyConnected(name='fc8', data=drop7 , num_hidden=num_classes, no_bias=False)
+	else:
+		fc8 = mx.symbol.FullyConnected(name='fc8_%s' % dataset, data=drop7 , num_hidden=num_classes, no_bias=False, attr={'lr_mult': '10'})
 	prob = mx.symbol.SoftmaxOutput(name='softmax', data=fc8 )
 	return prob
 
