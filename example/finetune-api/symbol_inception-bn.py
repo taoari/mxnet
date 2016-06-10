@@ -80,6 +80,9 @@ def get_symbol(num_classes=1000, dataset='imagenet'):
     avg = mx.symbol.Pooling(data=in5b, kernel=(7, 7), stride=(1, 1), name="global_pool", pool_type='avg')
     # linear classifier
     flatten = mx.symbol.Flatten(data=avg, name='flatten')
-    fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name='fc' if dataset == 'imagenet' else 'fc_%s' % dataset)
+    if dataset == 'imagenet':
+        fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name='fc')
+    else:
+        fc1 = mx.symbol.FullyConnected(data=flatten, num_hidden=num_classes, name='fc_%s' % dataset, attr={'lr_mult': '10'})
     softmax = mx.symbol.SoftmaxOutput(data=fc1, name='softmax')
     return softmax
