@@ -177,7 +177,10 @@ def get_symbol(num_classes=1000, dataset='imagenet'):
 	res5c_relu = mx.symbol.Activation(name='res5c_relu', data=res5c , act_type='relu')
 	pool5 = mx.symbol.Pooling(name='pool5', data=res5c_relu , pad=(0,0), kernel=(7,7), stride=(1,1), pool_type='avg')
 	flatten_0=mx.symbol.Flatten(name='flatten_0', data=pool5)
-	fc1000 = mx.symbol.FullyConnected(name='fc1000' if dataset == 'imagenet' else 'fc1000_%s' % dataset, data=flatten_0 , num_hidden=1000, no_bias=False)
+	if dataset == 'imagenet':
+		fc1000 = mx.symbol.FullyConnected(name='fc1000', data=flatten_0 , num_hidden=num_classes, no_bias=False)
+	else:
+		fc1000 = mx.symbol.FullyConnected(name='fc1000_%s' % dataset, data=flatten_0 , num_hidden=num_classes, no_bias=False, attr={'lr_mult': '10'})
 	prob = mx.symbol.SoftmaxOutput(name='softmax', data=fc1000 )
 	return prob
 
