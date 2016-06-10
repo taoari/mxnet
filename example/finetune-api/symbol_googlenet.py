@@ -144,7 +144,10 @@ def get_symbol(num_classes=1000, dataset='imagenet'):
 	pool5_7x7_s1 = mx.symbol.Pooling(name='pool5_7x7_s1', data=inception_5b_output , pad=(0,0), kernel=(7,7), stride=(1,1), pool_type='avg')
 	pool5_drop_7x7_s1 = mx.symbol.Dropout(name='pool5_drop_7x7_s1', data=pool5_7x7_s1 , p=0.400000)
 	flatten_0=mx.symbol.Flatten(name='flatten_0', data=pool5_drop_7x7_s1)
-	loss3_classifier = mx.symbol.FullyConnected(name='loss3_classifier' if dataset == 'imagenet' else 'loss3_classifier_%s' % dataset, data=flatten_0 , num_hidden=1000, no_bias=False)
+    if dataset == 'imagenet':
+        loss3_classifier = mx.symbol.FullyConnected(name='loss3_classifier', data=flatten_0 , num_hidden=num_classes, no_bias=False)
+    else:
+        loss3_classifier = mx.symbol.FullyConnected(name='loss3_classifier_%s' % dataset, data=flatten_0 , num_hidden=num_classes, no_bias=False, attr={'lr_mult': '10'})
 	prob = mx.symbol.SoftmaxOutput(name='softmax', data=loss3_classifier )
 	return prob
 
