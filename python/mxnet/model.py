@@ -208,6 +208,23 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     if update_on_kvstore:
         kvstore.set_optimizer(optimizer)
 
+    # eval initialization (no eval_batch_end_callback)
+    epoch = -1
+    eval_metric.reset()
+    eval_data.reset()
+    for i, eval_batch in enumerate(eval_data):
+        executor_manager.load_data_batch(eval_batch)
+        executor_manager.forward(is_train=False)
+        executor_manager.update_metric(eval_metric, eval_batch.label)
+        if eval_batch_end_callback != None:
+            batch_end_params = BatchEndParam(epoch=epoch,
+                                             nbatch=i,
+                                             eval_metric=eval_metric,
+                                             locals=locals())
+    name_value = eval_metric.get_name_value()
+    for name, value in name_value:
+        logger.info('Epoch[%d] Validation-%s=%f', epoch, name, value)
+
     # Now start training
     train_data.reset()
     for epoch in range(begin_epoch, end_epoch):
