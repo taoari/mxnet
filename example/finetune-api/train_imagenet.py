@@ -30,6 +30,8 @@ if __name__ == '__main__':
 
     # network
     import importlib
+    import sys
+    sys.path.append('.')
     net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_classes, args.dataset)
     
     # data
