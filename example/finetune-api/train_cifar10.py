@@ -37,6 +37,72 @@ def load_CIFAR10(ROOT):
     Xte, Yte = load_CIFAR_batch(os.path.join(ROOT, 'test_batch'))
     return Xtr, Ytr, Xte, Yte
 
+class NDArraySimpleAugmentationIter(mx.io.NDArrayIter):
+    """NDArrayIter object in mxnet. """
+
+    def __init__(self, data, label=None, batch_size=1, shuffle=False, last_batch_handle='pad',
+        pad=0, random_mirror=False, data_shape=None, random_crop=False):
+        # pylint: disable=W0201
+
+        super(NDArraySimpleAugmentationIter, self).__init__(data, label, batch_size, shuffle, last_batch_handle)
+        self.pad = pad
+        self.random_mirror = random_mirror
+        self.random_crop = random_crop
+        self.data_shape = data_shape
+        
+#    def next(self):
+#        """Get next data batch from iterator. Equivalent to
+#        self.iter_next()
+#        DataBatch(self.getdata(), self.getlabel(), self.getpad(), None)
+#
+#        Returns
+#        -------
+#        data : DataBatch
+#            The data of next batch.
+#        """
+#        if self.iter_next():
+#            return DataBatch(data=self.getdata(), label=self.getlabel(), \
+#                    pad=self.getpad(), index=self.getindex())
+#        else:
+#            raise StopIteration
+
+
+    def getdata(self):
+        """Get data of current batch.
+
+        Returns
+        -------
+        data : NDArray
+            The data of current batch.
+        """
+        data = super(NDArraySimpleAugmentationIter, self).getdata() # (N,C,H,W)
+        imgs = data[0].asnumpy().transpose(0,2,3,1) # (N,H,W,C)
+        processed_imgs = []
+        
+        if self.random_mirror:
+            _m = np.random.randint(0,2,len(imgs))
+        if self.random_crop:
+            _c_y = np.random.randint(0,imgs.shape[1]+2*self.pad-self.data_shape[1]+1,len(imgs))
+            _c_x = np.random.randint(0,imgs.shape[2]+2*self.pad-self.data_shape[2]+1,len(imgs))
+        for i, img in enumerate(imgs):
+            if self.pad > 0:
+                import cv2
+                img = cv2.copyMakeBorder(img,self.pad,self.pad,self.pad,self.pad,cv2.BORDER_REFLECT_101)
+            if self.random_mirror and _m[i]:
+                img = img[:,::-1,:] # flip on x axis
+            if self.random_crop:
+                img = img[_c_y[i]:_c_y[i]+self.data_shape[1], _c_x[i]:_c_x[i]+self.data_shape[2],:]
+            processed_imgs.append(img)
+            
+        processed_imgs = np.asarray(processed_imgs).transpose(0,3,1,2) # (N,C,H,W)
+        assert processed_imgs.shape[1:] == self.data_shape
+        
+        data = [mx.nd.empty(processed_imgs.shape, data[0].context)]
+        data[0][:] = processed_imgs
+            
+        return data
+
+    
 # don't use -n and -s, which are resevered for the distributed training
 def parse_args():
     parser = argparse.ArgumentParser(description='train an image classifer on mnist')
@@ -69,10 +135,11 @@ if __name__ == '__main__':
         Xtr, Ytr, Xte, Yte = load_CIFAR10(args.data_dir)
 
         # TODO: data augmentation
-        train = mx.io.NDArrayIter(data = Xtr.transpose(0,3,1,2),
+        train = NDArraySimpleAugmentationIter(data = Xtr.transpose(0,3,1,2),
             label = Ytr,
             batch_size = args.batch_size,
-            shuffle=True)
+            shuffle=True,
+            pad=4, random_mirror=True, data_shape=data_shape, random_crop=True)
         # train = mx.io.ImageRecordIter(
         #     path_imgrec = os.path.abspath(os.path.join(args.data_dir, args.train_dataset)),
         #     preprocess_threads = 1,
