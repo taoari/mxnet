@@ -38,12 +38,12 @@ import mxnet as mx
 def conv_factory(name, data, num_filter, kernel, stride, pad, conv_type=0):
     if conv_type == 0:
         conv = mx.symbol.Convolution(name=name, data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, no_bias=True)
-        bn = mx.symbol.BatchNorm(name=name+'_bn', data=conv)
+        bn = mx.symbol.BatchNorm(name=name+'_bn', data=conv, fix_gamma=False, eps=1e-5, momentum=0.9)
         act = mx.symbol.Activation(name=name+'_relu', data=bn, act_type='relu')
         return act
     elif conv_type == 1:
         conv = mx.symbol.Convolution(name=name, data=data, num_filter=num_filter, kernel=kernel, stride=stride, pad=pad, no_bias=True)
-        bn = mx.symbol.BatchNorm(name=name+'_bn', data=conv)
+        bn = mx.symbol.BatchNorm(name=name+'_bn', data=conv, fix_gamma=False, eps=1e-5, momentum=0.9)
         return bn
 
 def residual_factory(name, data, num_filter, dim_match):
@@ -65,8 +65,8 @@ def residual_factory(name, data, num_filter, dim_match):
         act = mx.symbol.Activation(name=name+'_relu', data=new_data, act_type='relu')
         return act
 
-def residual_net(data, num_level=3):
-    num_block = 3
+def residual_net(data, num_block=3):
+    num_level = 3
     num_filter = 16
     
     for level in range(num_level):
@@ -80,12 +80,12 @@ def residual_net(data, num_level=3):
      
     return data
 
-def get_symbol(num_classes=10, dataset='cifar10', num_level=3):
+def get_symbol(num_classes=10, dataset='cifar10', num_block=3):
     # set n = 3 means get a model with 3*6+2=20 layers,  set n = 9 means 9*6+2=56 layers
     data = mx.symbol.Variable(name='data')
     conv = conv_factory(name='conv1', data=data, num_filter=16, kernel=(3, 3), stride=(1, 1), pad=(1, 1), conv_type=0)
     
-    resnet = residual_net(conv, num_level=num_level)
+    resnet = residual_net(conv, num_block=num_block)
 
     pool = mx.symbol.Pooling(data=resnet, kernel=(8, 8), pool_type='avg')
     flatten = mx.symbol.Flatten(data=pool, name='flatten')

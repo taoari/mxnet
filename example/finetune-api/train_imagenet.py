@@ -32,7 +32,7 @@ if __name__ == '__main__':
     import importlib
     import sys
     sys.path.insert(0, '.') # current folder first
-    net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_classes, args.dataset)
+    net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_classes, args.dataset, **eval(args.network_kwargs))
     
     # data
     def get_iterator(args, kv):
