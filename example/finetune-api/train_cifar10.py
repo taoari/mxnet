@@ -141,7 +141,7 @@ if __name__ == '__main__':
     # network
     import importlib
     import sys
-    sys.path.append('.')
+    sys.path.insert(0, '.') # current folder first
     net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_classes, args.dataset)
     
     # data
