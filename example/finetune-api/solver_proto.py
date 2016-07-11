@@ -66,6 +66,8 @@ def proto_parser():
     # misc
     parser.add_argument('--network', type=str, default='inception-bn',
                         help = 'the cnn to use')
+    parser.add_argument('--network-kwargs', type=str, default='{}',
+                        help = 'network symbol kwargs')
 #    parser.add_argument('--gpus', type=str,
 #                        help='the gpus will be used, e.g "0,1,2,3"')
     parser.add_argument('--kv-store', type=str, default='local',
