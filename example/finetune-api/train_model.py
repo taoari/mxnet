@@ -3,22 +3,8 @@ import mxnet as mx
 import logging
 import os
 from mxnet.model import save_checkpoint
-def do_checkpoint(prefix, frequent=1):
-    """Callback to checkpoint the model to prefix every epoch.
-    Parameters
-    ----------
-    prefix : str
-        The file prefix to checkpoint to
-    Returns
-    -------
-    callback : function
-        The callback function that can be passed as iter_end_callback to fit.
-    """
-    def _callback(iter_no, sym, arg, aux):
-        """The checkpoint function."""
-        if (iter_no + 1) % frequent == 0:
-            save_checkpoint(prefix, iter_no + 1, sym, arg, aux)
-    return _callback
+from mxnet.callback import do_checkpoint
+
 def init_logger(log_file, head='%(asctime)-15s] %(message)s'):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
