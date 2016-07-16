@@ -171,6 +171,8 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
         Validation data iterator.
     eval_metric : EvalMetric
         An evaluation function or a list of evaluation functions.
+    eval_epoch : int, optional
+            The evaluation period, evaluate for every specified epochs.
     epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
         A callback that is invoked at end of each epoch.
         This can be used to checkpoint model each epoch.
@@ -775,6 +777,8 @@ class FeedForward(BASE_ESTIMATOR):
             The evaluation metric, name of evaluation metric.
             Or a customize evaluation function that returns the statistics
             based on minibatch.
+        eval_epoch : int, optional
+            The evaluation period, evaluate for every specified epochs.
         epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
             A callback that is invoked at end of each epoch.
             This can be used to checkpoint model each epoch.
@@ -945,6 +949,8 @@ class FeedForward(BASE_ESTIMATOR):
             The evaluation metric, name of evaluation metric.
             Or a customize evaluation function that returns the statistics
             based on minibatch.
+        eval_epoch : int, optional
+            The evaluation period, evaluate for every specified epochs.
         epoch_end_callback : callable(epoch, symbol, arg_params, aux_states)
             A callback that is invoked at end of each epoch.
             This can be used to checkpoint model each epoch.
