@@ -105,11 +105,21 @@ def fit(args, network, data_loader):
             args.gpus is None or len(args.gpus.split(',')) is 1):
         kv = None
 
+    initializer = None
+    if args.initializer == 'xavier':
+        initializer = mx.init.Xavier(factor_type="in", magnitude=3.0)
+    elif args.initializer == 'msra':
+        initializer = mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2)
+    elif args.initializer == 'old':
+        initializer = mx.init.Xavier(factor_type="in", magnitude=2.34)
+    else:
+        raise ValueError('Invalid initializer: %s' % args.initializer)
+
     model = mx.model.FeedForward(
         ctx                = devs,
         symbol             = network,
         num_epoch          = args.num_epochs,
-        initializer        = mx.init.Xavier(factor_type="in", magnitude=2.34),
+        initializer        = initializer,
         learning_rate      = args.lr,
         momentum           = args.momentum,
         wd                 = args.wd,
