@@ -68,7 +68,7 @@ def proto_parser():
                         help = 'the cnn to use')
     parser.add_argument('--network-kwargs', type=str, default='{}',
                         help = 'network symbol kwargs')
-    parser.add_argument('--initializer', type=str, default='msra', choices=['xavier', 'msra', 'old'],
+    parser.add_argument('--initializer', type=str, default='default', choices=['xavier', 'msra', 'default'],
                         help = 'the initializer to use for weights')
 #    parser.add_argument('--gpus', type=str,
 #                        help='the gpus will be used, e.g "0,1,2,3"')
