@@ -18,7 +18,7 @@ train_mnist.py --solver mnist_lenet.yml --gpus 0
 * mnist_lenet.yml
 
 ```
-data-dir: ../data/mnist/
+data_dir: ../data/mnist/
 dataset: mnist
 num_classes: 10
 num_examples: 60000
@@ -30,12 +30,16 @@ lr_factor_epoch: 2,5
 momentum: 0.8
 wd: 0.00005
 
-num_epochs: 10
-kv_store: local
-
-model_prefix: mnist_lenet
+display: 50
+eval_epoch: 1
 checkpoint_epoch: 5
-eval_epoch: 5
+num_epochs: 10
+model_prefix: mnist_lenet
+
+kv_store: local
+network: lenet
+initializer: msra
+# monitor: ".*weight"
 ```
 
 **Finetune Caltech101 with the pre-trained Inception-BN network**
