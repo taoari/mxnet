@@ -3,6 +3,12 @@ import mxnet as mx
 import logging
 import os
 
+def monitor_stats(d):
+    dd = d.asnumpy()
+    stats = mx.nd.zeros((4,), d.context)
+    stats[:] = np.array([dd.mean(), dd.std(), dd.min(), dd.max()])
+    return stats # [mx.nd.min(d), mx.nd.max(d)]
+
 def init_logger(log_file, head='%(asctime)-15s] %(message)s'):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -130,6 +136,7 @@ def fit(args, network, data_loader):
         X                  = train,
         eval_data          = val,
         kvstore            = kv,
+        monitor            = mon,
         eval_epoch         = args.eval_epoch,
         eval_metric        = ['accuracy', 'ce'],
         batch_end_callback = [mx.callback.Speedometer(args.batch_size, args.display)],
