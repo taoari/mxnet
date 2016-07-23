@@ -2,6 +2,7 @@ import find_mxnet
 import mxnet as mx
 import logging
 import os
+import numpy as np
 
 def monitor_stats(d):
     dd = d.asnumpy()
@@ -121,6 +122,12 @@ def fit(args, network, data_loader):
     else:
         raise ValueError('Invalid initializer: %s' % args.initializer)
 
+    # monitor
+    if args.monitor:
+        mon = mx.mon.Monitor(args.display, monitor_stats, pattern=args.monitor, sort=True)
+    else:
+        mon = None
+
     model = mx.model.FeedForward(
         ctx                = devs,
         symbol             = network,
@@ -141,3 +148,5 @@ def fit(args, network, data_loader):
         eval_metric        = ['accuracy', 'ce'],
         batch_end_callback = [mx.callback.Speedometer(args.batch_size, args.display)],
         epoch_end_callback = [checkpoint])
+
+    logging.info('Optimization done.')
