@@ -10,6 +10,8 @@ import json
 import re
 import copy
 
+def chunk_string(s, length):
+    return [s[i:length+i] for i in range(0, len(s), length)]
 
 def _str2tuple(string):
     """convert shape string to list, internal use only
@@ -26,7 +28,7 @@ def _str2tuple(string):
     return re.findall(r"\d+", string)
 
 
-def plot_network(symbol, title="plot", shape=None, node_attrs={}):
+def plot_network(symbol, title="plot", shape=None, with_op_name=False, with_param_shape=False, node_attrs={}):
     """convert symbol to dot object for visualization
 
     Parameters
@@ -58,15 +60,22 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
     if shape != None:
         draw_shape = True
         interals = symbol.get_internals()
-        _, out_shapes, _ = interals.infer_shape(**shape)
+        arg_shapes, out_shapes, aux_shapes = interals.infer_shape(**shape)
         if out_shapes == None:
             raise ValueError("Input shape is incompete")
         shape_dict = dict(zip(interals.list_outputs(), out_shapes))
+        arg_shape_dict = dict(zip(interals.list_arguments(), arg_shapes))
+        aux_shape_dict = dict(zip(interals.list_auxiliary_states(), aux_shapes))
+    else:
+        arg_shape_dict = {}
+        aux_shape_dict = {}
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
-    heads = set(conf["heads"][0])  # TODO(xxx): check careful
+    # heads = set(conf["heads"][0])  # TODO(xxx): check careful
+    param_pattern = re.compile('.*weight|.*bias|.*gamma|.*beta|.*mean|.*var')
+    heads = set([i for i in conf["arg_nodes"] if not param_pattern.match(nodes[i]['name'])])
     # default attributes of node
-    node_attr = {"shape": "box", "fixedsize": "true",
+    node_attr = {"shape": "box", "fixedsize": "false",
                  "width": "1.3", "height": "0.8034", "style": "filled"}
     # merge the dict provided by user and the default one
     node_attr.update(node_attrs)
@@ -80,6 +89,7 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
         node = nodes[i]
         op = node["op"]
         name = node["name"]
+        chunk_len = 12
         # input data
         attr = copy.deepcopy(node_attr)
         label = op
@@ -91,11 +101,15 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
             else:
                 continue
         elif op == "Convolution":
-            label = r"Convolution\n%sx%s/%s, %s" % (_str2tuple(node["param"]["kernel"])[0],
-                                                    _str2tuple(node["param"]["kernel"])[1],
-                                                    _str2tuple(node["param"]["stride"])[0],
-                                                    node["param"]["num_filter"])
+            label = r"Convolution\n%sx%s/%s/%s, %s" % (_str2tuple(node["param"]["kernel"])[0],
+                                                   _str2tuple(node["param"]["kernel"])[1],
+                                                   _str2tuple(node["param"]["stride"])[0],
+                                                   _str2tuple(node["param"]["pad"])[0],
+                                                   node["param"]["num_filter"])
             attr["fillcolor"] = cm[1]
+            kernel_size = float(_str2tuple(node["param"]["kernel"])[1])
+            if kernel_size > 1:
+                chunk_len += int(kernel_size-1)*2
         elif op == "FullyConnected":
             label = r"FullyConnected\n%s" % node["param"]["num_hidden"]
             attr["fillcolor"] = cm[1]
@@ -105,10 +119,11 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
             label = r"%s\n%s" % (op, node["param"]["act_type"])
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
-            label = r"Pooling\n%s, %sx%s/%s" % (node["param"]["pool_type"],
-                                                _str2tuple(node["param"]["kernel"])[0],
-                                                _str2tuple(node["param"]["kernel"])[1],
-                                                _str2tuple(node["param"]["stride"])[0])
+            label = r"Pooling\n%s, %sx%s/%s/%s" % (node["param"]["pool_type"],
+                                               _str2tuple(node["param"]["kernel"])[0],
+                                               _str2tuple(node["param"]["kernel"])[1],
+                                               _str2tuple(node["param"]["stride"])[0],
+                                               _str2tuple(node["param"]["pad"])[0])
             attr["fillcolor"] = cm[4]
         elif op == "Concat" or op == "Flatten" or op == "Reshape":
             attr["fillcolor"] = cm[5]
@@ -116,6 +131,24 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
             attr["fillcolor"] = cm[6]
         else:
             attr["fillcolor"] = cm[7]
+
+        # add paramter shapes info
+        if with_param_shape:
+            label_shape = []
+            for arg_name, arg_shape in arg_shape_dict.iteritems():
+                _s = arg_name.rsplit('_', 1)
+                if len(_s) == 2 and _s[0] == name:
+                    label_shape.append('%s:%s' % (_s[1], 'x'.join([str(x) for x in arg_shape])))
+            for aux_name, aux_shape in aux_shape_dict.iteritems():
+                _s = aux_name.rsplit('_', 2)
+                # TODO: not general, only for '<prefix>_moving_mean' and '<prefix>_moving_var'
+                if len(_s) == 3 and _s[0] == name:
+                    label_shape.append('%s:%s' % (_s[2], 'x'.join([str(x) for x in aux_shape])))
+            if label_shape:
+                label += '\n' + '\n'.join(chunk_string(', '.join(label_shape), chunk_len))
+
+        if with_op_name:
+            label = '\n'.join(chunk_string(name, chunk_len) + [label])
 
         dot.node(name=name, label=label, **attr)
 
@@ -136,7 +169,11 @@ def plot_network(symbol, title="plot", shape=None, node_attrs={}):
                     # add shapes
                     if draw_shape:
                         if input_node["op"] != "null":
-                            key = input_name + "_output"
+                            if input_node["op"] == 'SliceChannel':
+                                # TODO: Group output assumes to be the same shape
+                                key = input_name + "_output0"
+                            else:
+                                key = input_name + "_output"
                             shape = shape_dict[key][1:]
                             label = "x".join([str(x) for x in shape])
                             attr["label"] = label
