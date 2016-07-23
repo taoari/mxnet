@@ -76,6 +76,8 @@ def proto_parser():
                         help='the kvstore type')
     parser.add_argument('--log-file', type=str, default='auto',
                         help='the name of log file')
+    parser.add_argument('--monitor', type=str,
+                        help='the monitor to install')
 
     return parser
     
