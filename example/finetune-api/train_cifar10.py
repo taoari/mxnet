@@ -127,8 +127,6 @@ def parse_args():
                         help="load the model on an epoch using the model-prefix")
     parser.add_argument('--log-file', type=str, default='auto',
                         help='the name of log file')
-    parser.add_argument('--pad', type=int, default=0,
-                        help='pad extra pixels for data augmentation')
     return parser.parse_args()
 
 
