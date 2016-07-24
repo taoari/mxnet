@@ -78,6 +78,8 @@ def proto_parser():
                         help='the name of log file')
     parser.add_argument('--monitor', type=str,
                         help='the monitor to install')
+    parser.add_argument('--pad', type=int, default=0,
+                        help='pad extra pixels for data augmentation (for cifar10)')
 
     return parser
     
