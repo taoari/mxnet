@@ -10,6 +10,17 @@ def monitor_stats(d):
     stats[:] = np.array([dd.mean(), dd.std(), dd.min(), dd.max()])
     return stats # [mx.nd.min(d), mx.nd.max(d)]
 
+class ConstantInitializer(mx.initializer.Initializer):
+    def __init__(self, value=0.0):
+        self.value = value
+
+    def _init_gamma(self, _, arr):
+        arr[:] = self.value
+    def _init_weight(self, _, arr):
+        arr[:] = self.value
+    def _init_default(self, _, arr):
+        arr[:] = self.value
+
 def init_logger(log_file, head='%(asctime)-15s] %(message)s'):
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -112,6 +123,7 @@ def fit(args, network, data_loader):
             args.gpus is None or len(args.gpus.split(',')) is 1):
         kv = None
 
+    # initialization
     initializer = None
     if args.initializer == 'xavier':
         initializer = mx.init.Xavier(factor_type="in", magnitude=3.0)
@@ -121,6 +133,14 @@ def fit(args, network, data_loader):
         initializer = mx.init.Xavier(factor_type="in", magnitude=2.34)
     else:
         raise ValueError('Invalid initializer: %s' % args.initializer)
+
+    if args.initializer and args.initializer_extra:
+        args.initializer_extra = eval(args.initializer_extra)
+        keys = args.initializer_extra.keys()
+        patterns = ['.*weight'] + keys + ['.*']
+        initializers = [initializer] + [ConstantInitializer(args.initializer_extra[k]) for k in keys] + [mx.initializer.Initializer()]
+        initializer = mx.initializer.Mixed(patterns, initializers)
+
 
     # monitor
     if args.monitor:

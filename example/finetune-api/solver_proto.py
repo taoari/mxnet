@@ -70,6 +70,8 @@ def proto_parser():
                         help = 'network symbol kwargs')
     parser.add_argument('--initializer', type=str, default='default', choices=['xavier', 'msra', 'default'],
                         help = 'the initializer to use for weights')
+    parser.add_argument('--initializer-extra', type=str,
+                        help = 'the initializer extra {"pattern": value} for constant initialization')
 #    parser.add_argument('--gpus', type=str,
 #                        help='the gpus will be used, e.g "0,1,2,3"')
     parser.add_argument('--kv-store', type=str, default='local',
