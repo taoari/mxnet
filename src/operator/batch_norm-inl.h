@@ -32,6 +32,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   float momentum;
   bool fix_gamma;
   bool use_global_stats;
+  bool forward_use_moving;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0");
@@ -40,8 +41,10 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     DMLC_DECLARE_FIELD(fix_gamma).set_default(true)
     .describe("Fix gamma while training");
     DMLC_DECLARE_FIELD(use_global_stats).set_default(false)
-    .describe("Whether use global moving statistics instead of local batch-norm. "
-              "This will force change batch-norm into a scale shift operator.");
+    .describe("Whether use global moving statistics instead of local batch-norm for backward. "
+              "This will disable updating the moving mean and var.");
+    DMLC_DECLARE_FIELD(forward_use_moving).set_default(false)
+    .describe("Whether use global moving statistics instead of local batch-norm for forward. ");
   }
 };
 
@@ -101,10 +104,18 @@ class BatchNormOp : public Operator {
       mean = scale * sumall_except_dim<1>(data);
       var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
           data - broadcast<1>(mean, data.shape_)));
-      Assign(out, req[batchnorm::kOut], broadcast<1>(slope, out.shape_) *
-             (data - broadcast<1>(mean, data.shape_)) /
-             F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
-             broadcast<1>(bias, out.shape_));
+      if (!param_.forward_use_moving) {
+        Assign(out, req[batchnorm::kOut], broadcast<1>(slope, out.shape_) *
+               (data - broadcast<1>(mean, data.shape_)) /
+               F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
+               broadcast<1>(bias, out.shape_));
+      } else {
+        Assign(out, req[batchnorm::kOut], broadcast<1>(slope /
+                                            F<mshadow_op::square_root>(moving_var + param_.eps),
+                                            data.shape_) * data +
+               broadcast<1>(bias - (slope * moving_mean) /
+                            F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
+      }
     } else {
       Assign(out, req[batchnorm::kOut], broadcast<1>(slope /
                                           F<mshadow_op::square_root>(moving_var + param_.eps),
