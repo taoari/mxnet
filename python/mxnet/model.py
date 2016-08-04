@@ -212,7 +212,7 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
 
     # eval initialization (no eval_batch_end_callback)
     if eval_data:
-        epoch = -1
+        epoch = begin_epoch-1
         eval_metric.reset()
         eval_data.reset()
         for i, eval_batch in enumerate(eval_data):
