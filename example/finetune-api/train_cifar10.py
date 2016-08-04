@@ -41,7 +41,7 @@ class NDArraySimpleAugmentationIter(mx.io.NDArrayIter):
     """NDArrayIter object in mxnet. """
 
     def __init__(self, data, label=None, batch_size=1, shuffle=False, last_batch_handle='pad',
-        pad=0, random_mirror=False, data_shape=None, random_crop=False, mean_values=None):
+        pad=0, random_mirror=False, data_shape=None, random_crop=False, mean_values=None, scale=None):
         # pylint: disable=W0201
 
         super(NDArraySimpleAugmentationIter, self).__init__(data, label, batch_size, shuffle, last_batch_handle)
@@ -50,6 +50,7 @@ class NDArraySimpleAugmentationIter(mx.io.NDArrayIter):
         self.random_crop = random_crop
         self.data_shape = data_shape
         self.mean_values = mean_values
+        self.scale = scale
 
     @property
     def provide_data(self):
@@ -85,6 +86,8 @@ class NDArraySimpleAugmentationIter(mx.io.NDArrayIter):
         imgs = data[0].asnumpy().transpose(0,2,3,1) # (N,H,W,C)
         if self.mean_values:
             imgs = imgs - np.array(self.mean_values) # broading casting in channels
+        if self.scale:
+            imgs = imgs * self.scale
         processed_imgs = []
         
         if self.random_mirror:
@@ -152,7 +155,7 @@ if __name__ == '__main__':
             label = Ytr,
             batch_size = args.batch_size,
             shuffle=True,
-            pad=args.pad, random_mirror=True, data_shape=data_shape, random_crop=True, mean_values=[123.,117.,104.])
+            pad=args.pad, random_mirror=True, data_shape=data_shape, random_crop=True, mean_values=[123.,117.,104.], scale=1.0/60)
         # train = mx.io.ImageRecordIter(
         #     path_imgrec = os.path.abspath(os.path.join(args.data_dir, args.train_dataset)),
         #     preprocess_threads = 1,
@@ -171,7 +174,7 @@ if __name__ == '__main__':
                 label = Yte,
                 batch_size = args.batch_size,
                 shuffle=False,
-                pad=args.pad, random_mirror=False, data_shape=data_shape, random_crop=False, mean_values=[123.,117.,104.])
+                pad=args.pad, random_mirror=False, data_shape=data_shape, random_crop=False, mean_values=[123.,117.,104.], scale=1.0/60)
             # val = mx.io.ImageRecordIter(
             #     path_imgrec = os.path.abspath(os.path.join(args.data_dir, args.val_dataset)),
             #     preprocess_threads = 1,
