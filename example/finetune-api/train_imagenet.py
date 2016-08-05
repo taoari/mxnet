@@ -8,8 +8,6 @@ import argparse
 import os
 import train_model
 
-from dataset import RandomSkipResizeIter
-
 # don't use -n and -s, which are resevered for the distributed training
 def parse_args():
     parser = argparse.ArgumentParser(description='train an image classifer on mnist')
@@ -35,7 +33,7 @@ if __name__ == '__main__':
     import sys
     sys.path.insert(0, '.') # current folder first
     net = importlib.import_module('symbol_' + args.network).get_symbol(args.num_classes, args.dataset, **eval(args.network_kwargs))
-
+    
     # data
     def get_iterator(args, kv):
         data_shape = (3, args.data_shape, args.data_shape)
@@ -51,8 +49,6 @@ if __name__ == '__main__':
             num_parts   = kv.num_workers,
             part_index  = kv.rank)
 
-        train = RandomSkipResizeIter(train, size=int(args.num_examples/args.batch_size))
-
         if args.val_dataset:
             val = mx.io.ImageRecordIter(
                 path_imgrec = os.path.abspath(os.path.join(args.data_dir, args.val_dataset)),
@@ -66,10 +62,11 @@ if __name__ == '__main__':
                 num_parts   = kv.num_workers,
                 part_index  = kv.rank)
         else:
+            import logging
             logging.info('Valication dataset is not provided, hence evaluation is disabled.')
             val = None
-
+    
         return (train, val)
-
+    
     # train
     train_model.fit(args, net, get_iterator)
