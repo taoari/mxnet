@@ -431,7 +431,8 @@ class NDArrayIter(DataIter):
         self.label = _init_data(label, allow_empty=True, default_name=label_name)
 
         # shuffle data
-        if shuffle:
+        self.shuffle = shuffle
+        if self.shuffle:
             idx = np.arange(self.data[0][1].shape[0])
             np.random.shuffle(idx)
             self.data = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.data]
@@ -479,6 +480,13 @@ class NDArrayIter(DataIter):
         self.cursor = -self.batch_size
 
     def reset(self):
+        # shuffle data
+        if self.shuffle:
+            idx = np.arange(self.data[0][1].shape[0])
+            np.random.shuffle(idx)
+            self.data = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.data]
+            self.label = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.label]
+            
         if self.last_batch_handle == 'roll_over' and self.cursor > self.num_data:
             self.cursor = -self.batch_size + (self.cursor%self.num_data)%self.batch_size
         else:
