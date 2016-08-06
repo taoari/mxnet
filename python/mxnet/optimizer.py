@@ -145,6 +145,7 @@ class Optimizer(object):
                 if k.endswith('_lr_mult'):
                     self.lr_mult[k[:-len('_lr_mult')]] = float(v)
         self.lr_mult.update(args_lr_mult)
+        self.lr_mult = {k: v for k, v in self.lr_mult.items() if k in set(self.idx2name.values())}
         logging.info('lr_mult: %s', sorted(self.lr_mult.items()))
 
     def set_wd_mult(self, args_wd_mult):
@@ -169,6 +170,7 @@ class Optimizer(object):
                 if k.endswith('_wd_mult'):
                     self.wd_mult[k[:-len('_wd_mult')]] = float(v)
         self.wd_mult.update(args_wd_mult)
+        self.wd_mult = {k: v for k, v in self.wd_mult.items() if k in set(self.idx2name.values())}
         logging.info('wd_mult: %s', sorted(self.wd_mult.items()))
 
     def _update_count(self, index):
