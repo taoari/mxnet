@@ -82,9 +82,11 @@ def proto_parser():
                         help='the monitor to install')
     parser.add_argument('--pad', type=int, default=0,
                         help='pad extra pixels for data augmentation (for cifar10)')
+    parser.add_argument('--random-skip-ratio', type=float, default=0,
+                        help='random skip ratio in [0,1], if 0 no random skip (for mnist, imagenet)')
 
     return parser
-    
+
 def dict_to_arg_list(params):
     arg_list = []
     for k, v in params.items():
@@ -98,9 +100,9 @@ def dict_to_arg_list(params):
             arg_list.extend(['--' + k, str(v)])
         else:
             raise ValueError("Invalid parameter: %s=%s" % (k, v))
-            
+
     return arg_list
-    
+
 def parse_args_from_file(solver_yml):
     parser = proto_parser()
     if solver_yml is not None:
@@ -111,7 +113,7 @@ def parse_args_from_file(solver_yml):
     else:
         args = parser.parse_args([])
     return args
-    
+
 def namespace_update(ns1, ns2, exceptions=None):
     # make a copy
     dict1 = vars(ns1)
@@ -135,9 +137,9 @@ if __name__ == '__main__':
         parser.add_argument('--load-epoch', type=int,
                             help="load the model on an epoch using the model-prefix")
         return parser.parse_args()
-    
+
     args = parse_args()
     # print args
-    
+
     args = update_args(args, args.solver)
     print(args)
