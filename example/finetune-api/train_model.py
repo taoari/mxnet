@@ -52,10 +52,14 @@ def fit(args, network, data_loader):
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
     if 'log_file' in args and args.log_file is not None:
         init_logger(args.log_file, head)
-        logging.info('start with arguments %s', args)
+        logging.info('Start with arguments:')
+        for k, v in args._get_kwargs():
+            logging.info('    %s: %s', k, v)
     else:
         logging.basicConfig(level=logging.DEBUG, format=head)
-        logging.info('start with arguments %s', args)
+        logging.info('Start with arguments:')
+        for k, v in args._get_kwargs():
+            logging.info('    %s: %s', k, v)
 
     try:
         import socket
@@ -89,7 +93,7 @@ def fit(args, network, data_loader):
 
     # save model (Tao: checkpoint with checkpoint_epoch)
     checkpoint = None if model_prefix is None else mx.callback.do_checkpoint(model_prefix, args.checkpoint_epoch)
-    
+
     # data
     (train, val) = data_loader(args, kv)
 
@@ -157,7 +161,7 @@ def fit(args, network, data_loader):
         momentum           = args.momentum,
         wd                 = args.wd,
         **model_args)
-    
+
     # (Tao: eval_epoch support, eval_metric and display)
     model.fit(
         X                  = train,
