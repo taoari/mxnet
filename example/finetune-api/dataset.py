@@ -127,14 +127,15 @@ class RandomSkipResizeIter(mx.io.DataIter):
     reset_internal : whether to reset internal iterator on ResizeIter.reset
     """
 
-    def __init__(self, data_iter, size, max_random_skip=5, reset_internal=False):
+    def __init__(self, data_iter, size, skip_ratio=0.5, reset_internal=False):
         super(RandomSkipResizeIter, self).__init__()
         self.data_iter = data_iter
         self.size = size
         self.reset_internal = reset_internal
         self.cur = 0
         self.current_batch = None
-        self.max_random_skip = max_random_skip
+        self.prev_batch = None
+        self.skip_ratio = skip_ratio
 
         self.provide_data = data_iter.provide_data
         self.provide_label = data_iter.provide_label
@@ -145,20 +146,47 @@ class RandomSkipResizeIter(mx.io.DataIter):
         if self.reset_internal:
             self.data_iter.reset()
 
-    def __iter_next(self):
+    def __get_next(self):
         try:
-            self.current_batch = self.data_iter.next()
+            return self.data_iter.next()
         except StopIteration:
             self.data_iter.reset()
-            self.current_batch = self.data_iter.next()
+            return self.data_iter.next()
 
     def iter_next(self):
         if self.cur == self.size:
             return False
 
-        random_skip = np.random.randint(0, self.max_random_skip, 1)[0] + 1
-        for i in range(random_skip):
-            self.__iter_next()
+        data, label = [], []
+        if self.current_batch is None:
+            # very first
+            batch = self.__get_next()
+            self.current_batch = mx.io.DataBatch(data=[mx.nd.empty(batch.data[0].shape)], label=[mx.nd.empty(batch.label[0].shape)])
+            keep = np.random.rand(self.batch_size) > self.skip_ratio
+            batch_data = batch.data[0].asnumpy()
+            batch_label = batch.label[0].asnumpy()
+            data.extend(batch_data[keep])
+            label.extend(batch_label[keep])
+        elif self.prev_batch is not None:
+            # prev_batch
+            batch_data, batch_label = self.prev_batch
+            data.extend(batch_data)
+            label.extend(batch_label)
+
+        while len(data) < self.batch_size:
+            batch = self.__get_next()
+            keep = np.random.rand(self.batch_size) > self.skip_ratio
+            batch_data = batch.data[0].asnumpy()
+            batch_label = batch.label[0].asnumpy()
+            data.extend(batch_data[keep])
+            label.extend(batch_label[keep])
+
+        if len(data) > self.batch_size:
+            self.prev_batch = data[self.batch_size:], label[self.batch_size:]
+        else:
+            self.prev_batch = None
+        self.current_batch.data[0][:] = np.asarray(data[:self.batch_size])
+        self.current_batch.label[0][:] = np.asarray(label[:self.batch_size])
 
         self.cur += 1
         return True
