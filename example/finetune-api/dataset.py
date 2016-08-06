@@ -34,11 +34,11 @@ def load_CIFAR10(ROOT):
 class NDArraySimpleAugmentationIter(mx.io.NDArrayIter):
     """NDArrayIter object in mxnet. """
 
-    def __init__(self, data, label=None, batch_size=1, shuffle=False, last_batch_handle='pad',
+    def __init__(self, data, label=None, batch_size=1, shuffle=False, shuffle_on_reset=False, last_batch_handle='pad',
         pad=0, random_mirror=False, data_shape=None, random_crop=False, mean_values=None, scale=None):
         # pylint: disable=W0201
 
-        super(NDArraySimpleAugmentationIter, self).__init__(data, label, batch_size, shuffle, last_batch_handle)
+        super(NDArraySimpleAugmentationIter, self).__init__(data, label, batch_size, shuffle, shuffle_on_reset, last_batch_handle)
         self.pad = pad
         self.random_mirror = random_mirror
         self.random_crop = random_crop
