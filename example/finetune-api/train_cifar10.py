@@ -41,43 +41,18 @@ if __name__ == '__main__':
         data_shape = (3, args.data_shape, args.data_shape)
         Xtr, Ytr, Xte, Yte = load_CIFAR10(args.data_dir)
 
-        # TODO: data augmentation
         train = NDArraySimpleAugmentationIter(data = Xtr.transpose(0,3,1,2),
             label = Ytr,
             batch_size = args.batch_size,
-            shuffle=True,
+            shuffle=True, shuffle_on_reset=True,
             pad=args.pad, random_mirror=True, data_shape=data_shape, random_crop=True, mean_values=[123.,117.,104.], scale=1.0/60)
-        # train = mx.io.ImageRecordIter(
-        #     path_imgrec = os.path.abspath(os.path.join(args.data_dir, args.train_dataset)),
-        #     preprocess_threads = 1,
-        #     mean_r      = 123.68,
-        #     mean_g      = 116.779,
-        #     mean_b      = 103.939,
-        #     data_shape  = data_shape,
-        #     batch_size  = args.batch_size,
-        #     rand_crop   = True,
-        #     rand_mirror = True,
-        #     num_parts   = kv.num_workers,
-        #     part_index  = kv.rank)
 
         if args.val_dataset:
             val = NDArraySimpleAugmentationIter(data = Xte.transpose(0,3,1,2),
                 label = Yte,
                 batch_size = args.batch_size,
-                shuffle=False,
+                shuffle=False, shuffle_on_reset=False,
                 pad=args.pad, random_mirror=False, data_shape=data_shape, random_crop=False, mean_values=[123.,117.,104.], scale=1.0/60)
-            # val = mx.io.ImageRecordIter(
-            #     path_imgrec = os.path.abspath(os.path.join(args.data_dir, args.val_dataset)),
-            #     preprocess_threads = 1,
-            #     mean_r      = 123.68,
-            #     mean_g      = 116.779,
-            #     mean_b      = 103.939,
-            #     rand_crop   = False,
-            #     rand_mirror = False,
-            #     data_shape  = data_shape,
-            #     batch_size  = args.batch_size,
-            #     num_parts   = kv.num_workers,
-            #     part_index  = kv.rank)
         else:
             logging.info('Valication dataset is not provided, hence evaluation is disabled.')
             val = None
