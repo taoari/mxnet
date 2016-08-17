@@ -34,7 +34,6 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
   float slope;
   float lower_bound;
   float upper_bound;
-  bool channel_shared;
   DMLC_DECLARE_PARAMETER(LeakyReLUParam) {
     DMLC_DECLARE_FIELD(act_type).set_default(leakyrelu::kLeakyReLU)
     .add_enum("rrelu", leakyrelu::kRReLU)
@@ -48,8 +47,6 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
     .describe("Lower bound of random slope. (For rrelu only)");
     DMLC_DECLARE_FIELD(upper_bound).set_default(0.334f)
     .describe("Upper bound of random slope. (For rrelu only)");
-    DMLC_DECLARE_FIELD(channel_shared).set_default(false)
-    .describe("Channel shared the for gamma parameters. (For prelu only)");
   }
 };
 
@@ -102,13 +99,8 @@ class LeakyReLUOp : public Operator {
       }
       case leakyrelu::kPReLU: {
         weight = in_data[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
-        if (!param_.channel_shared) {
-          Assign(out, req[leakyrelu::kOut],
-                 F<mshadow_op::xelu>(data, broadcast<1>(weight, out.shape_)));
-        } else {
-          Assign(out, req[leakyrelu::kOut],
-                 F<mshadow_op::xelu>(data, weight[0])); // broadcast<1>(weight, out.shape_)));          
-        }
+        Assign(out, req[leakyrelu::kOut],
+               F<mshadow_op::xelu>(data, broadcast<1>(weight, out.shape_)));
         break;
       }
       case leakyrelu::kRReLU: {
@@ -184,15 +176,8 @@ class LeakyReLUOp : public Operator {
       case leakyrelu::kPReLU: {
         weight = in_data[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
         grad_weight = in_grad[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
-        if (!param_.channel_shared) {
-          Assign(grad_weight, req[leakyrelu::kGamma], sumall_except_dim<1>(F<prelu_grad>(data) * grad));
-          Assign(gdata, req[leakyrelu::kData],
-            F<mshadow_op::xelu_grad>(output, broadcast<1>(weight, data.shape_)) * grad);
-        } else {
-          Assign(grad_weight, req[leakyrelu::kGamma], mshadow::red::sum(F<prelu_grad>(data) * grad)); // sumall?
-          Assign(gdata, req[leakyrelu::kData],
-            F<mshadow_op::xelu_grad>(output, weight[0]) * grad); // broadcast<1>(weight, data.shape_)) * grad);
-        }
+        Assign(grad_weight, req[leakyrelu::kGamma], sumall_except_dim<1>(F<prelu_grad>(data) * grad));
+        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(output, broadcast<1>(weight, data.shape_)) * grad);
         break;
       }
       case leakyrelu::kRReLU: {
@@ -238,11 +223,7 @@ class LeakyReLUProp : public OperatorProperty {
     const TShape &dshape = in_shape->at(leakyrelu::kData);
     if (dshape.ndim() == 0) return false;
     if (param_.act_type == leakyrelu::kPReLU) {
-      if (!param_.channel_shared) {
-        in_shape->at(leakyrelu::kGamma) = TShape(Shape1(dshape[1]));
-      } else {
-        in_shape->at(leakyrelu::kGamma) = TShape(Shape1(1));
-      }
+      in_shape->at(leakyrelu::kGamma) = TShape(Shape1(dshape[1]));
     }
     out_shape->clear();
     out_shape->push_back(dshape);
