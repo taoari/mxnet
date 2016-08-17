@@ -35,6 +35,7 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
   float lower_bound;
   float upper_bound;
   bool channel_shared;
+  bool clip_gamma;
   DMLC_DECLARE_PARAMETER(LeakyReLUParam) {
     DMLC_DECLARE_FIELD(act_type).set_default(leakyrelu::kLeakyReLU)
     .add_enum("rrelu", leakyrelu::kRReLU)
@@ -50,12 +51,22 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
     .describe("Upper bound of random slope. (For rrelu only)");
     DMLC_DECLARE_FIELD(channel_shared).set_default(false)
     .describe("Channel shared the for gamma parameters. (For prelu only)");
+    DMLC_DECLARE_FIELD(clip_gamma).set_default(false)
+    .describe("Clip gamma parameters to [0,1]. (For prelu only)");
   }
 };
 
 struct prelu_grad {
   MSHADOW_XINLINE static real_t Map(real_t a) {
     return a > 0.0f ? 0.0f : a;
+  }
+};
+
+struct clip_gamma {
+  MSHADOW_XINLINE static real_t Map(real_t a) {
+    if (a < 0.0f) { return 0.0f; }
+    else if (a > 1.0) { return 1.0f; }
+    else { return a; }
   }
 };
 
@@ -102,6 +113,9 @@ class LeakyReLUOp : public Operator {
       }
       case leakyrelu::kPReLU: {
         weight = in_data[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
+        if (param_.clip_gamma) {
+          weight = F<clip_gamma>(weight);
+        }
         Assign(out, req[leakyrelu::kOut],
                F<mshadow_op::xelu>(data, broadcast<1>(weight, out.shape_)));
         break;
