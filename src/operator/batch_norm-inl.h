@@ -33,6 +33,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   bool fix_gamma;
   bool use_global_stats;
   bool forward_use_moving;
+  bool backward_update_moving;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0");
@@ -41,10 +42,13 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     DMLC_DECLARE_FIELD(fix_gamma).set_default(true)
     .describe("Fix gamma while training");
     DMLC_DECLARE_FIELD(use_global_stats).set_default(false)
-    .describe("Whether use global moving statistics instead of local batch-norm for backward. "
-              "This will disable updating the moving mean and var.");
+    .describe("Whether use global moving statistics instead of local batch-norm. "
+              "This will disable updating the moving mean and var."
+              "Equivalent to forward_use_moving=true and backward_update_moving=false.");
     DMLC_DECLARE_FIELD(forward_use_moving).set_default(false)
-    .describe("Whether use global moving statistics instead of local batch-norm for forward. ");
+    .describe("Whether use global moving statistics instead of local batch-norm for forward.");
+    DMLC_DECLARE_FIELD(backward_update_moving).set_default(true)
+    .describe("Whether update global moving statistics for backward.");
   }
 };
 
@@ -95,7 +99,7 @@ class BatchNormOp : public Operator {
     if (ctx.is_train && param_.fix_gamma) slope = 1.f;
 
     // whether use global statistics
-    if (ctx.is_train && !param_.use_global_stats) {
+    if (ctx.is_train && param_.backward_update_moving) {
       Tensor<xpu, 1> mean = out_data[batchnorm::kMean].get<xpu, 1, real_t>(s);
       Tensor<xpu, 1> var = out_data[batchnorm::kVar].get<xpu, 1, real_t>(s);
       CHECK(req[batchnorm::kMean] == kNullOp || req[batchnorm::kMean] == kWriteTo);
@@ -164,7 +168,7 @@ class BatchNormOp : public Operator {
     Tensor<xpu, 1> moving_mean = aux_states[batchnorm::kMovingMean].get<xpu, 1, real_t>(s);
     Tensor<xpu, 1> moving_var = aux_states[batchnorm::kMovingVar].get<xpu, 1, real_t>(s);
 
-    if (ctx.is_train && !param_.use_global_stats) {
+    if (ctx.is_train && param_.backward_update_moving) {
       // get requested temp space
       Tensor<xpu, 2> workspace = ctx.requested[batchnorm::kTempSpace].get_space<xpu>(
           mshadow::Shape2(3, mean.shape_[0]), s);
