@@ -25,7 +25,8 @@ namespace leakyrelu {
 enum LeakyReLUOpInputs {kData, kGamma};
 enum LeakyReLUOpOutputs {kOut, kMask};
 enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU, kELU};
-enum LeakyReLUOpResource {kRandom, kTempSpace};
+enum LeakyReLUOpResource {kRandom};
+enum LeakyReLUOpResourceBackward {kTempSpace}; // for PReLU
 }  // namespace leakyrelu
 
 struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
