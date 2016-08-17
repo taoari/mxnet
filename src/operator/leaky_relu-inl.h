@@ -25,7 +25,7 @@ namespace leakyrelu {
 enum LeakyReLUOpInputs {kData, kGamma};
 enum LeakyReLUOpOutputs {kOut, kMask};
 enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU, kELU};
-enum LeakyReLUOpResource {kRandom};
+enum LeakyReLUOpResource {kRandom, kTempSpace};
 }  // namespace leakyrelu
 
 struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
@@ -196,9 +196,12 @@ class LeakyReLUOp : public Operator {
         Assign(grad_weight, req[leakyrelu::kGamma], sumall_except_dim<1>(F<prelu_grad>(data) * grad));
         Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(output, broadcast<1>(weight, data.shape_)) * grad);
         if (param_.channel_shared) {
+          Tensor<cpu, 1> workspace =
+            ctx.requested[leakyrelu::kTempSpace].get_host_space_typed<1, real_t>(grad_weight.shape_);
+          Copy(workspace, grad_weight, grad_weight.stream_);
           float s = 0.0f;
-          for (index_t i=0; i < grad_weight.size(0); ++i) {
-            s += grad_weight[i];
+          for (index_t i=0; i < workspace.size(0); ++i) {
+            s += workspace[i];
           }
           grad_weight = s; // TODO: only for write request
         }
@@ -334,6 +337,15 @@ class LeakyReLUProp : public OperatorProperty {
       const std::vector<TShape> &in_shape) const override {
     if (param_.act_type == leakyrelu::kRReLU) {
       return {ResourceRequest::kRandom};
+    } else {
+      return std::vector<ResourceRequest>();
+    }
+  }
+
+  std::vector<ResourceRequest> BackwardResource(
+      const std::vector<TShape> &in_shape) const override {
+    if (param_.act_type == leakyrelu::kPReLU && param_.channel_shared == true) {
+      return {ResourceRequest::kTempSpace};
     } else {
       return std::vector<ResourceRequest>();
     }
