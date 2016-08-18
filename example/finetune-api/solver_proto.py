@@ -26,6 +26,16 @@ def proto_parser():
     group_dataset.add_argument('--data-shape', type=int, default=224,
                         help='set image\'s shape')
 
+    # dataset preprocessing
+    group_dataset.add_argument('--mean-values', type=str,
+                        help='RGB mean values to substract e.g. [123,117,104] or [123.68,116.779,103.939] (for cifar10)')
+    group_dataset.add_argument('--scale', type=float, default=1.0,
+                        help='multiply scale for mean substracted images (for cifar10)')
+    group_dataset.add_argument('--pad', type=int, default=0,
+                        help='pad extra pixels for data augmentation (for cifar10)')
+    group_dataset.add_argument('--random-skip-ratio', type=float, default=0,
+                        help='random skip ratio in [0,1], if 0 no random skip (for mnist, imagenet)')
+
     # optimizer and lr scheduler
     group_opt = parser.add_argument_group('options for optimizer and lr scheduler')
     group_opt.add_argument('--lr', type=float, default=.01,
@@ -82,10 +92,6 @@ def proto_parser():
                         help='the name of log file')
     parser.add_argument('--monitor', type=str,
                         help='the monitor to install')
-    parser.add_argument('--pad', type=int, default=0,
-                        help='pad extra pixels for data augmentation (for cifar10)')
-    parser.add_argument('--random-skip-ratio', type=float, default=0,
-                        help='random skip ratio in [0,1], if 0 no random skip (for mnist, imagenet)')
 
     return parser
 
