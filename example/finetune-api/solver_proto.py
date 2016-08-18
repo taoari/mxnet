@@ -49,6 +49,8 @@ def proto_parser():
                         help='evaluation metrics, comma separated list')
     group_freq.add_argument('--eval-epoch', type=int, default=1,
                         help='do evaluation every <eval-epoch> epochs')
+    group_freq.add_argument('--eval-initialization', type=bool, default=True,
+                        help='do evaluation at initial')
     group_freq.add_argument('--checkpoint-epoch', type=int, default=1,
                         help='do checkpoint every <checkpoint-epoch> epochs')
     group_freq.add_argument('--num-epochs', type=int, default=20,
@@ -94,8 +96,12 @@ def dict_to_arg_list(params):
         if v is None:
             pass
         elif type(v) is bool:
+            # pitfall for bool: --<key>='' is False, any non-empty string is True
+            # e.g. --<key>=False and --<key>=None are still True
             if v == True:
-                arg_list.append('--' + k)
+                arg_list.append('--' + k, 'True')
+            else:
+                arg_list.extend(['--' + k, ''])
         elif type(v) in [str, float, int]:
             arg_list.extend(['--' + k, str(v)])
         else:

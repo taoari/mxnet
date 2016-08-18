@@ -169,6 +169,7 @@ def fit(args, network, data_loader):
         kvstore            = kv,
         monitor            = mon,
         eval_epoch         = args.eval_epoch,
+        eval_initialization = args.eval_initialization,
         eval_metric        = ['accuracy', 'ce'],
         batch_end_callback = [mx.callback.Speedometer(args.batch_size, args.display)],
         epoch_end_callback = [checkpoint])
