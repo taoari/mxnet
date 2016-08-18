@@ -40,19 +40,21 @@ if __name__ == '__main__':
     def get_iterator(args, kv):
         data_shape = (3, args.data_shape, args.data_shape)
         Xtr, Ytr, Xte, Yte = load_CIFAR10(args.data_dir)
+        mean_values = [float(v) for v in args.mean_values.split(',')] if args.mean_values else None
+        scale = None if args.scale == 1.0 else args.scale
 
         train = NDArraySimpleAugmentationIter(data = Xtr.transpose(0,3,1,2),
             label = Ytr,
             batch_size = args.batch_size,
             shuffle=True, shuffle_on_reset=True,
-            pad=args.pad, random_mirror=True, data_shape=data_shape, random_crop=True, mean_values=[123.,117.,104.], scale=1.0/60)
+            pad=args.pad, random_mirror=True, data_shape=data_shape, random_crop=True, mean_values=mean_values, scale=scale)
 
         if args.val_dataset:
             val = NDArraySimpleAugmentationIter(data = Xte.transpose(0,3,1,2),
                 label = Yte,
                 batch_size = args.batch_size,
                 shuffle=False, shuffle_on_reset=False,
-                pad=args.pad, random_mirror=False, data_shape=data_shape, random_crop=False, mean_values=[123.,117.,104.], scale=1.0/60)
+                pad=args.pad, random_mirror=False, data_shape=data_shape, random_crop=False, mean_values=mean_values, scale=scale)
         else:
             logging.info('Valication dataset is not provided, hence evaluation is disabled.')
             val = None
