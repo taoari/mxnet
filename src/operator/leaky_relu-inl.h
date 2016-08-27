@@ -186,6 +186,7 @@ class LeakyReLUOp : public Operator {
         data = in_data[leakyrelu::kData].get<xpu, 4, real_t>(s);
       }
     }
+    // TODO: must make sure slope >= 0, otherwise xelu_grad(output, slope) is wrong for backward
     switch (param_.act_type) {
       case leakyrelu::kLeakyReLU: {
         Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(output, param_.slope) * grad);
@@ -195,7 +196,7 @@ class LeakyReLUOp : public Operator {
         weight = in_data[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
         grad_weight = in_grad[leakyrelu::kGamma].get<xpu, 1, real_t>(s);
         Assign(grad_weight, req[leakyrelu::kGamma], sumall_except_dim<1>(F<prelu_grad>(data) * grad));
-        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(output, broadcast<1>(weight, data.shape_)) * grad);
+        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(data, broadcast<1>(weight, data.shape_)) * grad);
         if (param_.channel_shared) {
           Tensor<cpu, 1> workspace =
             ctx.requested[leakyrelu::kTempSpace].get_host_space_typed<1, real_t>(grad_weight.shape_);
