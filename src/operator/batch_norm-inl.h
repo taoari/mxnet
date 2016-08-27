@@ -32,6 +32,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   float momentum;
   bool fix_gamma;
   bool use_global_stats;
+  bool backward_update_moving;
   DMLC_DECLARE_PARAMETER(BatchNormParam) {
     DMLC_DECLARE_FIELD(eps).set_default(1e-3f)
     .describe("Epsilon to prevent div 0");
@@ -42,6 +43,8 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     DMLC_DECLARE_FIELD(use_global_stats).set_default(false)
     .describe("Whether use global moving statistics instead of local batch-norm. "
               "This will force change batch-norm into a scale shift operator.");
+    DMLC_DECLARE_FIELD(backward_update_moving).set_default(true)
+    .describe("Whether update moving statistics for backward while training.");
   }
 };
 
@@ -91,16 +94,21 @@ class BatchNormOp : public Operator {
 
     if (param_.fix_gamma) slope = 1.f;
 
-    // whether use global statistics
-    if (ctx.is_train && !param_.use_global_stats) {
-      Tensor<xpu, 1> mean = out_data[batchnorm::kMean].get<xpu, 1, real_t>(s);
-      Tensor<xpu, 1> var = out_data[batchnorm::kVar].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> mean = out_data[batchnorm::kMean].get<xpu, 1, real_t>(s);
+    Tensor<xpu, 1> var = out_data[batchnorm::kVar].get<xpu, 1, real_t>(s);
+
+    // whether calucate mean and var
+    if (ctx.is_train && (!param_.use_global_stats || param_.backward_update_moving)) {
       CHECK(req[batchnorm::kMean] == kNullOp || req[batchnorm::kMean] == kWriteTo);
       CHECK(req[batchnorm::kVar] == kNullOp || req[batchnorm::kVar] == kWriteTo);
       // The first three steps must be enforced.
       mean = scale * sumall_except_dim<1>(data);
       var = scale * sumall_except_dim<1>(F<mshadow_op::square>(
           data - broadcast<1>(mean, data.shape_)));
+    }
+
+    // whether use global statistics
+    if (ctx.is_train && !param_.use_global_stats) {
       Assign(out, req[batchnorm::kOut], broadcast<1>(slope, out.shape_) *
              (data - broadcast<1>(mean, data.shape_)) /
              F<mshadow_op::square_root>(broadcast<1>(var + param_.eps, data.shape_)) +
@@ -163,8 +171,6 @@ class BatchNormOp : public Operator {
       Tensor<xpu, 1> gvar = workspace[1];
       Tensor<xpu, 1> tmp = workspace[2];
 
-      moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
-      moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
       // cal
       gvar = sumall_except_dim<1>((grad * broadcast<1>(slope, data.shape_)) *
                                   (data - broadcast<1>(mean, data.shape_)) *
@@ -206,6 +212,11 @@ class BatchNormOp : public Operator {
       Assign(grad_in, req[batchnorm::kData], (grad * broadcast<1>(slope, data.shape_)) *
              broadcast<1>(
                  1.0f / F<mshadow_op::square_root>(moving_var + param_.eps), data.shape_));
+    }
+
+    if (ctx.is_train && param_.backward_update_moving) {
+      moving_mean = moving_mean * param_.momentum + mean * (1 - param_.momentum);
+      moving_var = moving_var * param_.momentum + var * (1 - param_.momentum);
     }
   }
 
