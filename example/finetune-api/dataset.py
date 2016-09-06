@@ -202,3 +202,58 @@ class RandomSkipResizeIter(mx.io.DataIter):
 
     def getpad(self):
         return self.current_batch.pad
+
+class RecordIter(mx.io.DataIter):
+    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True):
+        super(RecordIter, self).__init__()
+        self.path_imagerec = path_imgrec
+        self.data_shape = data_shape
+        self.batch_size = batch_size
+        self.compressed = compressed
+        self.record = mx.recordio.MXRecordIO(os.path.abspath(path_imgrec), 'r')
+        self._data = None
+
+    @property
+    def provide_data(self):
+        """The name and shape of data provided by this iterator"""
+        return [('data', (self.batch_size,) + self.data_shape)]
+
+    @property
+    def provide_label(self):
+        """The name and shape of label provided by this iterator"""
+        return [('softmax_label', (self.batch_size,))]
+
+    def reset(self):
+        self.record.reset()
+
+    def iter_next(self):
+        # ensure that there are <batch_size> data left, otherwise return False
+        self._data = []
+        for i in range(self.batch_size):
+            self._data.append(self.record.read())
+            if self._data[-1] is None:
+                return False
+        return True
+
+    def __parse_data_label(self, _data):
+        data = []
+        label = []
+        for d in _data:
+            if self.compressed:
+                header, img = mx.recordio.unpack_img(d) # img: BGR uint8 (H,W,C)
+                img = img[:,:,::-1] # RGB
+            else:
+                header, img = mx.recordio.unpack(d)
+                shape = np.fromstring(img, dtype=np.float32, count=3) # H,W,C
+                shape = tuple([int(i) for i in shape])
+                img = np.fromstring(img[12:], dtype=np.uint8).reshape(shape) # img: RGB uint8 (H,W,C)
+            data.append(img.transpose(2,0,1)) # RGB uint8 (C,H,W)
+            label.append(header.label)
+        return data, label
+
+    def next(self):
+        if self.iter_next():
+            data, label = self.__parse_data_label(self._data)
+            return mx.io.DataBatch(data=[mx.nd.array(data)], label=[mx.nd.array(label)])
+        else:
+            raise StopIteration
