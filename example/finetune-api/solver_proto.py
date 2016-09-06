@@ -80,7 +80,7 @@ def proto_parser():
                         help = 'the cnn to use')
     parser.add_argument('--network-kwargs', type=str, default='{}',
                         help = 'network symbol kwargs')
-    parser.add_argument('--initializer', type=str, default='default', choices=['xavier', 'msra', 'default'],
+    parser.add_argument('--initializer', type=str, default='default', choices=['xavier', 'msra', 'normal', 'default'],
                         help = 'the initializer to use for weights')
     parser.add_argument('--initializer-extra', type=str,
                         help = 'the initializer extra {"pattern": value} for constant initialization')
