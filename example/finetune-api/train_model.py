@@ -15,10 +15,13 @@ class ConstantInitializer(mx.initializer.Initializer):
         self.value = value
 
     def _init_gamma(self, _, arr):
+        logging.info('Init (Constant) %s with value %s', _, self.value)
         arr[:] = self.value
     def _init_weight(self, _, arr):
+        logging.info('Init (Constant) %s with value %s', _, self.value)
         arr[:] = self.value
     def _init_default(self, _, arr):
+        logging.info('Init (Constant) %s with value %s', _, self.value)
         arr[:] = self.value
 
 def init_logger(log_file, head='%(asctime)-15s] %(message)s'):
@@ -133,6 +136,8 @@ def fit(args, network, data_loader):
         initializer = mx.init.Xavier(factor_type="in", magnitude=3.0)
     elif args.initializer == 'msra':
         initializer = mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2)
+    elif args.initializer == 'normal':
+        initializer = mx.init.Normal(sigma=0.01)
     elif args.initializer == 'default':
         initializer = mx.init.Xavier(factor_type="in", magnitude=2.34)
     else:
