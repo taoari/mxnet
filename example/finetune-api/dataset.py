@@ -51,23 +51,6 @@ class NDArraySimpleAugmentationIter(mx.io.NDArrayIter):
         """The name and shape of data provided by this iterator"""
         return [(k, tuple([self.batch_size] + list(self.data_shape))) for k, v in self.data]
 
-#    def next(self):
-#        """Get next data batch from iterator. Equivalent to
-#        self.iter_next()
-#        DataBatch(self.getdata(), self.getlabel(), self.getpad(), None)
-#
-#        Returns
-#        -------
-#        data : DataBatch
-#            The data of next batch.
-#        """
-#        if self.iter_next():
-#            return DataBatch(data=self.getdata(), label=self.getlabel(), \
-#                    pad=self.getpad(), index=self.getindex())
-#        else:
-#            raise StopIteration
-
-
     def getdata(self):
         """Get data of current batch.
 
@@ -235,7 +218,7 @@ class RecordIter(mx.io.DataIter):
                 return False
         return True
 
-    def __parse_data_label(self, _data):
+    def _parse_data_label(self, _data):
         data = []
         label = []
         for d in _data:
@@ -253,7 +236,83 @@ class RecordIter(mx.io.DataIter):
 
     def next(self):
         if self.iter_next():
-            data, label = self.__parse_data_label(self._data)
+            data, label = self._parse_data_label(self._data)
             return mx.io.DataBatch(data=[mx.nd.array(data)], label=[mx.nd.array(label)])
         else:
             raise StopIteration
+
+def get_min_size(height, width, size):
+    if height >= width:
+        return int(height*size/width), size
+    else:
+        return size, int(width*size/height)
+
+class RecordSimpleAugmentationIter(RecordIter):
+    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True,
+                 random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
+                 min_size=0, max_size=0):
+        super(RecordSimpleAugmentationIter, self).__init__(path_imgrec, data_shape, batch_size, compressed)
+        self.random_mirror=random_mirror
+        self.random_crop=random_crop
+        self.mean_values=mean_values
+        self.scale = scale
+        self.pad = pad
+        self.min_size = min_size
+        self.max_size = max_size
+        if max_size > 0:
+            assert max_size >= min_size
+
+    def __aug_img(self, img):
+        # assume img RGB float32 (H,W,C)
+        import cv2
+        import random
+        # pad
+        if self.pad > 0:
+            img = cv2.copyMakeBorder(img,self.pad,self.pad,self.pad,self.pad,cv2.BORDER_REFLECT_101)
+        # resize (multi-scale): min_size and max_size
+        size = None
+        if self.min_size > 0 and self.max_size > 0:
+            size = random.randint(self.min_size, self.max_size)
+        elif self.min_size > 0:
+            size = self.min_size
+        if size:
+            # NOTE: OpenCV use (width, height), while Numpy use (height, width)
+            _h, _w = get_min_size(img.shape[0], img.shape[1], size)
+            img = cv2.resize(img, (_w,_h))
+        # random_crop
+        if self.random_crop:
+            _c_y = random.randint(0, img.shape[0]-self.data_shape[1])
+            _c_x = random.randint(0, img.shape[1]-self.data_shape[2])
+        else:
+            _c_y = (img.shape[0]-self.data_shape[1])/2
+            _c_x = (img.shape[1]-self.data_shape[2])/2
+        assert img.shape[0] >= self.data_shape[1] and img.shape[1] >= self.data_shape[2]
+        img = img[_c_y:_c_y+self.data_shape[1], _c_x:_c_x+self.data_shape[2],:]
+        # random_mirror
+        if self.random_mirror and random.randint(0,1):
+            img = img[:,::-1,:] # flip on x axis
+        # mean_values
+        if self.mean_values:
+            img -= np.array(self.mean_values, dtype=np.float32)
+        # scale
+        if self.scale and self.scale != 1.0:
+            img *= self.scale
+        assert img.shape == (self.data_shape[1], self.data_shape[2], self.data_shape[0])
+        return img
+
+    def _parse_data_label(self, _data):
+        data = []
+        label = []
+        for d in _data:
+            if self.compressed:
+                header, img = mx.recordio.unpack_img(d) # img: BGR uint8 (H,W,C)
+                img = img[:,:,::-1] # RGB
+            else:
+                header, img = mx.recordio.unpack(d)
+                shape = np.fromstring(img, dtype=np.float32, count=3) # H,W,C
+                shape = tuple([int(i) for i in shape])
+                img = np.fromstring(img[12:], dtype=np.uint8).reshape(shape) # img: RGB uint8 (H,W,C)
+            img = self.__aug_img(np.float32(img))
+            data.append(img.transpose(2,0,1)) # RGB uint8 (C,H,W)
+            label.append(header.label)
+        return data, label
