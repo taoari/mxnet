@@ -85,6 +85,10 @@ def fit(args, network, data_loader):
                       'aux_params' : tmp.aux_params,
                       'begin_epoch' : args.load_epoch}
 
+        # TODO: check epoch_size for 'dist_sync'
+        epoch_size = args.num_examples / args.batch_size
+        model_args['begin_num_update'] = epoch_size * args.load_epoch
+
     if args.finetune_from is not None:
         assert args.load_epoch is None
         assert args.finetune_from.endswith('.params')
@@ -120,7 +124,7 @@ def fit(args, network, data_loader):
                 factor = args.lr_factor)
         else:
             model_args['lr_scheduler'] = mx.lr_scheduler.MultiFactorScheduler(
-                step = [max(int(epoch_size * _f), 1) for _f in lr_factor_epoch],
+                step = [max(int(epoch_size * _fe), 1) for _fe in lr_factor_epoch],
                 factor = args.lr_factor)
 
     if 'clip_gradient' in args and args.clip_gradient is not None:
