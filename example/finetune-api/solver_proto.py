@@ -35,6 +35,12 @@ def proto_parser():
                         help='pad extra pixels for data augmentation (for cifar10)')
     group_dataset.add_argument('--random-skip-ratio', type=float, default=0,
                         help='random skip ratio in [0,1], if 0 no random skip (for mnist, imagenet)')
+    group_dataset.add_argument('--encoding', type=str, default='.jpg', choices=['.raw', '.jpg', '.png'],
+                        help='encoding for the record file')
+    group_dataset.add_argument('--min-size', type=int, default=0,
+                        help='minimum image size for the shorter edge')
+    group_dataset.add_argument('--max-size', type=int, default=0,
+                        help='maximum image size for the shorter edge, for multi-scale augmentation')
 
     # optimizer and lr scheduler
     group_opt = parser.add_argument_group('options for optimizer and lr scheduler')
