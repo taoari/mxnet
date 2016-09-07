@@ -224,6 +224,10 @@ class RecordIter(mx.io.DataIter):
         for d in _data:
             if self.compressed:
                 header, img = mx.recordio.unpack_img(d) # img: BGR uint8 (H,W,C)
+                if len(img.shape) == 2:
+                    img = np.dstack([img,img,img])
+                elif len(img.shape) == 4:
+                    img = img[:,:,:3]
                 img = img[:,:,::-1] # RGB
             else:
                 header, img = mx.recordio.unpack(d)
@@ -306,6 +310,10 @@ class RecordSimpleAugmentationIter(RecordIter):
         for d in _data:
             if self.compressed:
                 header, img = mx.recordio.unpack_img(d) # img: BGR uint8 (H,W,C)
+                if len(img.shape) == 2:
+                    img = np.dstack([img,img,img])
+                elif len(img.shape) == 4:
+                    img = img[:,:,:3]
                 img = img[:,:,::-1] # RGB
             else:
                 header, img = mx.recordio.unpack(d)
