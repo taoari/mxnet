@@ -2,6 +2,7 @@ import find_mxnet
 import mxnet as mx
 import numpy as np
 import os
+import warnings
 
 def load_CIFAR10(ROOT):
     """ load all of cifar (from standford cs231n assignments) """
@@ -224,16 +225,21 @@ class RecordIter(mx.io.DataIter):
         for d in _data:
             if self.compressed:
                 header, img = mx.recordio.unpack_img(d) # img: BGR uint8 (H,W,C)
-                if len(img.shape) == 2:
-                    img = np.dstack([img,img,img])
-                elif len(img.shape) == 4:
-                    img = img[:,:,:3]
+                with warnings.catch_warnings():
+                    warnings.simplefilter("once")
+                    if len(img.shape) == 2:
+                        warnings.warn('gray image encountered')
+                        img = np.dstack([img,img,img])
+                    elif len(img.shape) == 4:
+                        warnings.warn('RGBA image encountered')
+                        img = img[:,:,:3]
                 img = img[:,:,::-1] # RGB
             else:
                 header, img = mx.recordio.unpack(d)
                 shape = np.fromstring(img, dtype=np.float32, count=3) # H,W,C
                 shape = tuple([int(i) for i in shape])
                 img = np.fromstring(img[12:], dtype=np.uint8).reshape(shape) # img: RGB uint8 (H,W,C)
+            assert img.shape[2] == 3
             data.append(img.transpose(2,0,1)) # RGB uint8 (C,H,W)
             label.append(header.label)
         return data, label
@@ -310,16 +316,21 @@ class RecordSimpleAugmentationIter(RecordIter):
         for d in _data:
             if self.compressed:
                 header, img = mx.recordio.unpack_img(d) # img: BGR uint8 (H,W,C)
-                if len(img.shape) == 2:
-                    img = np.dstack([img,img,img])
-                elif len(img.shape) == 4:
-                    img = img[:,:,:3]
+                with warnings.catch_warnings():
+                    warnings.simplefilter("once")
+                    if len(img.shape) == 2:
+                        warnings.warn('gray image encountered')
+                        img = np.dstack([img,img,img])
+                    elif len(img.shape) == 4:
+                        warnings.warn('RGBA image encountered')
+                        img = img[:,:,:3]
                 img = img[:,:,::-1] # RGB
             else:
                 header, img = mx.recordio.unpack(d)
                 shape = np.fromstring(img, dtype=np.float32, count=3) # H,W,C
                 shape = tuple([int(i) for i in shape])
                 img = np.fromstring(img[12:], dtype=np.uint8).reshape(shape) # img: RGB uint8 (H,W,C)
+            assert img.shape[2] == 3
             img = self.__aug_img(np.float32(img))
             data.append(img.transpose(2,0,1)) # RGB uint8 (C,H,W)
             label.append(header.label)
