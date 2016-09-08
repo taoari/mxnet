@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     # data
     def get_iterator(args, kv):
-        data_shape = (3, args.data_shape, args.data_shape)
+        data_shape = tuple([int(i) for i in args.data_shape.split(',')])
         train = mx.io.ImageRecordIter(
             path_imgrec = os.path.abspath(os.path.join(args.data_dir, args.train_dataset)),
             mean_r      = 123.68,

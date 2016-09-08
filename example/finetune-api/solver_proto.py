@@ -23,7 +23,7 @@ def proto_parser():
                         help='train dataset name')
     group_dataset.add_argument('--val-dataset', type=str, default="val.rec",
                         help="validation dataset name")
-    group_dataset.add_argument('--data-shape', type=int, default=224,
+    group_dataset.add_argument('--data-shape', type=str, default='3,224,224',
                         help='set image\'s shape')
 
     # dataset preprocessing

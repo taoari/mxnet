@@ -5,7 +5,7 @@ import find_mxnet
 import mxnet as mx
 import logging
 import argparse
-import os, sys
+import os
 import train_model
 
 from dataset import RandomSkipResizeIter
@@ -122,14 +122,12 @@ if __name__ == '__main__':
     args = update_args(args, args.solver)
 
 
+    data_shape = tuple([int(i) for i in args.data_shape.split(',')])
     if args.network == 'mlp':
-        data_shape = (784, )
         net = get_mlp(args.dataset, args.num_classes)
     elif args.network == 'lenet':
-        data_shape = (1, 28, 28)
         net = get_lenet(args.dataset, args.num_classes)
     else:
-        data_shape = (784,) if 'mlp' in args.network else (1, 28, 28)
         import importlib
         import sys
         sys.path.insert(0, '.') # current folder first
