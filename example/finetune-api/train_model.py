@@ -89,8 +89,8 @@ def fit(args, network, data_loader):
         epoch_size = args.num_examples / args.batch_size
         model_args['begin_num_update'] = epoch_size * args.load_epoch
 
-    if args.finetune_from is not None:
-        assert args.load_epoch is None
+    elif args.finetune_from is not None:
+        # load_epoch has higher priority than finetune_from
         assert args.finetune_from.endswith('.params')
         finetune_from_prefix, finetune_from_epoch = args.finetune_from[:-len('.params')].rsplit('-', 1)
         finetune_from_epoch = int(finetune_from_epoch)
