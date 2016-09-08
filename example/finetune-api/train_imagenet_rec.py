@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     # data
     def get_iterator(args, kv):
-        data_shape = (3, args.data_shape, args.data_shape)
+        data_shape = tuple([int(i) for i in args.data_shape.split(',')])
         mean_values = [float(v) for v in args.mean_values.split(',')] if args.mean_values else None
         scale = None if args.scale == 1.0 else args.scale
         compressed = True if args.encoding != '.raw' else False

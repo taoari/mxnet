@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     # data
     def get_iterator(args, kv):
-        data_shape = (3, args.data_shape, args.data_shape)
+        data_shape = tuple([int(i) for i in args.data_shape.split(',')])
         Xtr, Ytr, Xte, Yte = load_CIFAR10(args.data_dir)
         mean_values = [float(v) for v in args.mean_values.split(',')] if args.mean_values else None
         scale = None if args.scale == 1.0 else args.scale
