@@ -216,6 +216,14 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
     # eval initialization (no eval_batch_end_callback)
     if eval_data and eval_initialization:
         epoch = begin_epoch-1
+
+        # logging learning rate
+        if optimizer.lr_scheduler:
+            logger.info('Epoch[%d] lr = %f', epoch, optimizer.lr_scheduler(optimizer.num_update))
+        else:
+            logger.info('Epoch[%d] lr = %f', epoch, optimizer.lr)
+
+        # evaluation
         eval_metric.reset()
         eval_data.reset()
         for i, eval_batch in enumerate(eval_data):
@@ -293,14 +301,14 @@ def _train_multi_device(symbol, ctx, arg_names, param_names, aux_names,
             if epoch_size is None or nbatch >= epoch_size:
                 break
 
+        toc = time.time()
+        logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
+
         # logging learning rate
         if optimizer.lr_scheduler:
             logger.info('Epoch[%d] lr = %f', epoch, optimizer.lr_scheduler(optimizer.num_update))
         else:
             logger.info('Epoch[%d] lr = %f', epoch, optimizer.lr)
-
-        toc = time.time()
-        logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc - tic))
 
         if epoch_end_callback or epoch + 1 == end_epoch:
             executor_manager.copy_to(arg_params, aux_params)
