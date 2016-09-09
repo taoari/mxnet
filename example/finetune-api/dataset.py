@@ -3,6 +3,8 @@ import mxnet as mx
 import numpy as np
 import os
 import warnings
+import cv2
+import random
 
 def load_CIFAR10(ROOT):
     """ load all of cifar (from standford cs231n assignments) """
@@ -188,12 +190,13 @@ class RandomSkipResizeIter(mx.io.DataIter):
         return self.current_batch.pad
 
 class RecordIter(mx.io.DataIter):
-    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True):
+    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False):
         super(RecordIter, self).__init__()
         self.path_imagerec = path_imgrec
         self.data_shape = data_shape
         self.batch_size = batch_size
         self.compressed = compressed
+        self.offset_on_reset = offset_on_reset
         self.record = mx.recordio.MXRecordIO(os.path.abspath(path_imgrec), 'r')
         self._data = None
 
@@ -209,6 +212,10 @@ class RecordIter(mx.io.DataIter):
 
     def reset(self):
         self.record.reset()
+        if self.offset_on_reset:
+            # avoid data batch always starting from 0, (True if training, False if testing)
+            for i in range(random.randint(0, self.batch_size-1)):
+                self.record.read()
 
     def iter_next(self):
         # ensure that there are <batch_size> data left, otherwise return False
@@ -258,10 +265,10 @@ def get_min_size(height, width, size):
         return size, int(width*size/height)
 
 class RecordSimpleAugmentationIter(RecordIter):
-    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True,
+    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False,
                  random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
                  min_size=0, max_size=0):
-        super(RecordSimpleAugmentationIter, self).__init__(path_imgrec, data_shape, batch_size, compressed)
+        super(RecordSimpleAugmentationIter, self).__init__(path_imgrec, data_shape, batch_size, compressed, offset_on_reset)
         self.random_mirror=random_mirror
         self.random_crop=random_crop
         self.mean_values=mean_values
@@ -274,8 +281,6 @@ class RecordSimpleAugmentationIter(RecordIter):
 
     def __aug_img(self, img):
         # assume img RGB float32 (H,W,C)
-        import cv2
-        import random
         # pad
         if self.pad > 0:
             img = cv2.copyMakeBorder(img,self.pad,self.pad,self.pad,self.pad,cv2.BORDER_REFLECT_101)

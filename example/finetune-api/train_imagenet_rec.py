@@ -43,7 +43,8 @@ if __name__ == '__main__':
         scale = None if args.scale == 1.0 else args.scale
         compressed = True if args.encoding != '.raw' else False
 
-        train = RecordSimpleAugmentationIter(os.path.abspath(os.path.join(args.data_dir, args.train_dataset)), data_shape, args.batch_size, compressed=compressed,
+        train = RecordSimpleAugmentationIter(os.path.abspath(os.path.join(args.data_dir, args.train_dataset)),
+            data_shape, args.batch_size, compressed=compressed, offset_on_reset=True,
             random_mirror=True, random_crop=True, mean_values=mean_values, scale=scale, pad=args.pad,
             min_size=args.min_size, max_size=args.max_size)
 
@@ -52,7 +53,8 @@ if __name__ == '__main__':
                 size=int(args.num_examples/args.batch_size))
 
         if args.val_dataset:
-            val = RecordSimpleAugmentationIter(os.path.abspath(os.path.join(args.data_dir, args.val_dataset)), data_shape, args.batch_size, compressed=compressed,
+            val = RecordSimpleAugmentationIter(os.path.abspath(os.path.join(args.data_dir, args.val_dataset)),
+                data_shape, args.batch_size, compressed=compressed, offset_on_reset=False,
                 random_mirror=False, random_crop=False, mean_values=mean_values, scale=scale, pad=0,
                 min_size=args.min_size, max_size=0) # no pad, max_size (multi-scale) for test
         else:
