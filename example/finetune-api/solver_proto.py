@@ -33,8 +33,8 @@ def proto_parser():
                         help='multiply scale for mean substracted images (for cifar10)')
     group_dataset.add_argument('--pad', type=int, default=0,
                         help='pad extra pixels for data augmentation (for cifar10)')
-    group_dataset.add_argument('--random-skip-ratio', type=float, default=0,
-                        help='random skip ratio in [0,1], if 0 no random skip (for mnist, imagenet)')
+    group_dataset.add_argument('--skip-ratio', type=float, default=0,
+                        help='random skip ratio in [0,1), if 0 no random skip (for mnist, imagenet)')
     group_dataset.add_argument('--encoding', type=str, default='.jpg', choices=['.raw', '.jpg', '.png'],
                         help='encoding for the record file')
     group_dataset.add_argument('--min-size', type=int, default=0,
