@@ -188,7 +188,7 @@ def fit(args, network, data_loader):
         monitor            = mon,
         eval_epoch         = args.eval_epoch,
         eval_initialization = args.eval_initialization,
-        eval_metric        = ['accuracy', 'ce'],
+        eval_metric        = args.eval_metric.split(','),
         batch_end_callback = [mx.callback.Speedometer(args.batch_size, args.display)],
         epoch_end_callback = [checkpoint])
 
