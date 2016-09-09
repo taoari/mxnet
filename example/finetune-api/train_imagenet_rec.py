@@ -45,18 +45,15 @@ if __name__ == '__main__':
 
         train = RecordSimpleAugmentationIter(os.path.abspath(os.path.join(args.data_dir, args.train_dataset)),
             data_shape, args.batch_size, compressed=compressed, offset_on_reset=True,
+            skip_ratio=args.skip_ratio, epoch_size=int(args.num_examples/args.batch_size),
             random_mirror=True, random_crop=True, mean_values=mean_values, scale=scale, pad=args.pad,
             min_size=args.min_size, max_size=args.max_size)
-
-        if args.random_skip_ratio > 0.0:
-            train = RandomSkipResizeIter(train, skip_ratio=args.random_skip_ratio,
-                size=int(args.num_examples/args.batch_size))
 
         if args.val_dataset:
             val = RecordSimpleAugmentationIter(os.path.abspath(os.path.join(args.data_dir, args.val_dataset)),
                 data_shape, args.batch_size, compressed=compressed, offset_on_reset=False,
                 random_mirror=False, random_crop=False, mean_values=mean_values, scale=scale, pad=0,
-                min_size=args.min_size, max_size=0) # no pad, max_size (multi-scale) for test
+                min_size=args.min_size, max_size=0) # no pad, skip_ratio, epoch_size, max_size (multi-scale) for test
         else:
             logging.info('Valication dataset is not provided, hence evaluation is disabled.')
             val = None

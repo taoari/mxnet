@@ -197,6 +197,7 @@ class RecordIter(mx.io.DataIter):
         self.batch_size = batch_size
         self.compressed = compressed
         self.offset_on_reset = offset_on_reset
+
         self.record = mx.recordio.MXRecordIO(os.path.abspath(path_imgrec), 'r')
         self._data = None
 
@@ -262,17 +263,67 @@ class RecordIter(mx.io.DataIter):
         else:
             raise StopIteration
 
+class RecordSkipIter(RecordIter):
+    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False,
+                 skip_ratio=0.0, epoch_size=None):
+        super(RecordSkipIter, self).__init__(path_imgrec, data_shape, batch_size, compressed, offset_on_reset)
+        self.skip_ratio = skip_ratio
+        self.epoch_size = epoch_size
+        self.cur = 0
+
+        assert skip_ratio >= 0.0 and skip_ratio < 1.0
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            if skip_ratio > 0.0:
+                assert self.epoch_size is not None and self.epoch_size > 0
+                if self.offset_on_reset:
+                    warnings.warn('when skip_ratio > 0.0, offset_on_reset is automatically disabled')
+                    self.offset_on_reset = False
+            else:
+                # assert self.size is None # size is not support by RecordIter
+                if self.epoch_size is not None:
+                    warnings.warn('when skip_ratio == 0.0, size is not used')
+                    self.epoch_size = None
+
+
+    def reset(self):
+        if self.skip_ratio == 0.0:
+            super(RecordSkipIter, self).reset()
+        else:
+            self.cur = 0
+
+    def iter_next(self):
+        if self.skip_ratio == 0.0:
+            # do not forget return
+            return super(RecordSkipIter, self).iter_next()
+        else:
+            if self.cur < self.epoch_size:
+                self._data = []
+                while len(self._data) < self.batch_size:
+                    s = self.record.read()
+                    if s is None:
+                        self.record.reset()
+                        s = self.record.read()
+                    # logic: if skip_ratio == 0, no drop
+                    if random.random() >= self.skip_ratio:
+                        self._data.append(s)
+                self.cur += 1
+                return True
+            else:
+                return False
+
 def get_min_size(height, width, size):
     if height >= width:
         return int(height*size/width), size
     else:
         return size, int(width*size/height)
 
-class RecordSimpleAugmentationIter(RecordIter):
+class RecordSimpleAugmentationIter(RecordSkipIter):
     def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False,
+                 skip_ratio=0.0, epoch_size=None,
                  random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
                  min_size=0, max_size=0):
-        super(RecordSimpleAugmentationIter, self).__init__(path_imgrec, data_shape, batch_size, compressed, offset_on_reset)
+        super(RecordSimpleAugmentationIter, self).__init__(path_imgrec, data_shape, batch_size, compressed, offset_on_reset, skip_ratio, epoch_size)
         self.random_mirror=random_mirror
         self.random_crop=random_crop
         self.mean_values=mean_values
