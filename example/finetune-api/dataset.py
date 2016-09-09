@@ -226,6 +226,9 @@ class RecordIter(mx.io.DataIter):
                 return False
         return True
 
+    def _aug_img(self, img):
+        return img
+
     def _parse_data_label(self, _data):
         data = []
         label = []
@@ -247,6 +250,7 @@ class RecordIter(mx.io.DataIter):
                 shape = tuple([int(i) for i in shape])
                 img = np.fromstring(img[12:], dtype=np.uint8).reshape(shape) # img: RGB uint8 (H,W,C)
             assert img.shape[2] == 3
+            img = self._aug_img(np.float32(img))
             data.append(img.transpose(2,0,1)) # RGB uint8 (C,H,W)
             label.append(header.label)
         return data, label
@@ -279,7 +283,7 @@ class RecordSimpleAugmentationIter(RecordIter):
         if max_size > 0:
             assert max_size >= min_size
 
-    def __aug_img(self, img):
+    def _aug_img(self, img):
         # assume img RGB float32 (H,W,C)
         # pad
         if self.pad > 0:
@@ -314,29 +318,3 @@ class RecordSimpleAugmentationIter(RecordIter):
             img *= self.scale
         assert img.shape == (self.data_shape[1], self.data_shape[2], self.data_shape[0])
         return img
-
-    def _parse_data_label(self, _data):
-        data = []
-        label = []
-        for d in _data:
-            if self.compressed:
-                header, img = mx.recordio.unpack_img(d) # img: BGR uint8 (H,W,C)
-                with warnings.catch_warnings():
-                    warnings.simplefilter("once")
-                    if len(img.shape) == 2:
-                        warnings.warn('gray image encountered')
-                        img = np.dstack([img,img,img])
-                    elif len(img.shape) == 4:
-                        warnings.warn('RGBA image encountered')
-                        img = img[:,:,:3]
-                img = img[:,:,::-1] # RGB
-            else:
-                header, img = mx.recordio.unpack(d)
-                shape = np.fromstring(img, dtype=np.float32, count=3) # H,W,C
-                shape = tuple([int(i) for i in shape])
-                img = np.fromstring(img[12:], dtype=np.uint8).reshape(shape) # img: RGB uint8 (H,W,C)
-            assert img.shape[2] == 3
-            img = self.__aug_img(np.float32(img))
-            data.append(img.transpose(2,0,1)) # RGB uint8 (C,H,W)
-            label.append(header.label)
-        return data, label
