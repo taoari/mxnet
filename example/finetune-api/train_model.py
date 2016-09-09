@@ -140,8 +140,10 @@ def fit(args, network, data_loader):
         # 'xavier', 'msra', 'default'
         if key == 'xavier':
             return mx.init.Xavier(factor_type="in", magnitude=3.0)
+        elif key == 'xavier-gaussian':
+            return mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=1.0)
         elif key == 'msra':
-            return mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2)
+            return mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2.0)
         elif key == 'default':
             return mx.init.Xavier(factor_type="in", magnitude=2.34)
         # 'normal', 'uniform', 'const'
@@ -155,7 +157,7 @@ def fit(args, network, data_loader):
             raise ValueError('Invalid initializer: %s' % args.initializer)
 
     initializer = None
-    if args.initializer in ['xavier', 'msra', 'default']:
+    if args.initializer in ['xavier', 'xavier-gaussian', 'msra', 'default']:
         initializer = get_initializer(args.initializer)
     else:
         args.initializer = OrderedDict(eval(args.initializer))
