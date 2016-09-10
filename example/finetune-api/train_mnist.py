@@ -80,8 +80,8 @@ def get_iterator(data_shape):
             num_parts   = kv.num_workers,
             part_index  = kv.rank)
 
-        if args.random_skip_ratio > 0.0:
-            train = RandomSkipResizeIter(train, skip_ratio=args.random_skip_ratio,
+        if args.skip_ratio > 0.0:
+            train = RandomSkipResizeIter(train, skip_ratio=args.skip_ratio,
                 size=int(args.num_examples/args.batch_size))
 
         if args.val_dataset:
