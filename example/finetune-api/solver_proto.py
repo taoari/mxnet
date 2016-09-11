@@ -61,7 +61,7 @@ def proto_parser():
     group_freq = parser.add_argument_group('options for display, evaluation, checkpoint frequency')
     group_freq.add_argument('--display', type=int, default=50,
                         help='display speedometer per display iterations')
-    group_freq.add_argument('--eval-metric', type=str, default='acc,ce',
+    group_freq.add_argument('--eval-metric', type=str, default='ce,acc',
                         help='evaluation metrics, comma separated list')
     group_freq.add_argument('--eval-epoch', type=int, default=1,
                         help='do evaluation every <eval-epoch> epochs')
