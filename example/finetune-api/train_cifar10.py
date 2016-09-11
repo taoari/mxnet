@@ -47,14 +47,16 @@ if __name__ == '__main__':
             label = Ytr,
             batch_size = args.batch_size,
             shuffle=True, shuffle_on_reset=True,
-            pad=args.pad, random_mirror=True, data_shape=data_shape, random_crop=True, mean_values=mean_values, scale=scale)
+            pad=args.pad, random_mirror=True, data_shape=data_shape, random_crop=True, 
+            mean_values=mean_values, scale=scale, last_batch_handle='discard')
 
         if args.val_dataset:
             val = NDArraySimpleAugmentationIter(data = Xte.transpose(0,3,1,2),
                 label = Yte,
                 batch_size = args.batch_size,
                 shuffle=False, shuffle_on_reset=False,
-                pad=args.pad, random_mirror=False, data_shape=data_shape, random_crop=False, mean_values=mean_values, scale=scale)
+                pad=args.pad, random_mirror=False, data_shape=data_shape, random_crop=False, 
+                mean_values=mean_values, scale=scale, last_batch_handle='discard')
         else:
             logging.info('Valication dataset is not provided, hence evaluation is disabled.')
             val = None
