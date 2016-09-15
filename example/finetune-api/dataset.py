@@ -274,28 +274,21 @@ class RecordSkipIter(RecordIter):
         assert skip_ratio >= 0.0 and skip_ratio < 1.0
         with warnings.catch_warnings():
             warnings.simplefilter("always")
-            if skip_ratio > 0.0:
-                assert self.epoch_size is not None and self.epoch_size > 0
-                if self.offset_on_reset:
+            if self.epoch_size is not None:
+                assert self.epoch_size > 0
+                if self.offset_on_reset and self.skip_ratio > 0.0:
                     warnings.warn('when skip_ratio > 0.0, offset_on_reset is automatically disabled')
                     self.offset_on_reset = False
-            else:
-                # assert self.size is None # size is not support by RecordIter
-                if self.epoch_size is not None:
-                    warnings.warn('when skip_ratio == 0.0, size is not used')
-                    self.epoch_size = None
-
 
     def reset(self):
-        if self.skip_ratio == 0.0:
+        if self.epoch_size is None:
             super(RecordSkipIter, self).reset()
         else:
             self.cur = 0
 
     def iter_next(self):
-        if self.skip_ratio == 0.0:
-            # do not forget return
-            return super(RecordSkipIter, self).iter_next()
+        if self.epoch_size is None:
+            return super(RecordSkipIter, self).iter_next() # do not forget return
         else:
             if self.cur < self.epoch_size:
                 self._data = []
