@@ -241,8 +241,8 @@ class RecordIter(mx.io.DataIter):
                     if len(img.shape) == 2:
                         warnings.warn('gray image encountered')
                         img = np.dstack([img,img,img])
-                    elif len(img.shape) == 4:
-                        warnings.warn('RGBA image encountered')
+                    elif img.shape[2] == 4:
+                        warnings.warn('BGRA image encountered')
                         img = img[:,:,:3]
                 img = img[:,:,::-1] # RGB
             else:
