@@ -56,6 +56,8 @@ def proto_parser():
                         help='times the lr with a factor for every lr-factor-epoch epoch')
     group_opt.add_argument('--lr-factor-epoch', type=str, default='1.',
                         help='the numbers of epoch to factor the lr, could be a float or comma seperated floats')
+    group_opt.add_argument('--lr-slow-epoch', type=float, default=0,
+                        help='the number of epoch for slow start')
 
     # display, evaluation, checkpoint frequency
     group_freq = parser.add_argument_group('options for display, evaluation, checkpoint frequency')
