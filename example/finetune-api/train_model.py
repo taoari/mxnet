@@ -125,7 +125,8 @@ def fit(args, network, data_loader):
         else:
             model_args['lr_scheduler'] = mx.lr_scheduler.MultiFactorScheduler(
                 step = [max(int(epoch_size * _fe), 1) for _fe in lr_factor_epoch],
-                factor = args.lr_factor)
+                factor = args.lr_factor,
+                slow_step = int(args.lr_slow_epoch * epoch_size)) # TODO: lr_slow_epoch only support for MultiFactorScheduler now
 
     if 'clip_gradient' in args and args.clip_gradient is not None:
         model_args['clip_gradient'] = args.clip_gradient
