@@ -8,7 +8,57 @@ import argparse
 import os
 import train_model
 
-from dataset import load_CIFAR10, NDArraySimpleAugmentationIter
+from dataiter import NDArraySimpleAugmentationIter
+
+def load_CIFAR10(root_dir='cifar-10-batches-py', return_classes=False):
+    '''Load CIFAR 10 dataset.
+
+    Returns
+    -------
+    Xtr : ndarray
+        50000 32x32 RGB uint8 images.
+    Ytr : ndarray
+        Train labels.
+    Xte : ndarray
+        10000 32x32 RGB uint8 images.
+    Yte : ndarray
+        Test labels.
+    classes : list of string (if return_classes=True)
+        Image labels.
+    '''
+
+    import cPickle
+    import numpy as np
+    import os
+
+    def unpickle(filename):
+        with open(filename, 'rb') as f:
+            dict = cPickle.load(f)
+        return dict
+
+    def load_CIFAR_batch(filename):
+        train = unpickle(filename)
+        X = train['data'].reshape((-1,3,32,32)).transpose(0,2,3,1) # 50000 32x32 RGB unit8 images
+        y = np.array(train['labels'], dtype=np.int64)
+        return X, y
+
+    xs = []
+    ys = []
+    for b in range(1,6):
+        X, Y = load_CIFAR_batch(os.path.join(root_dir, 'data_batch_%d' % b))
+        xs.append(X)
+        ys.append(Y)
+    Xtr = np.concatenate(xs)
+    Ytr = np.concatenate(ys)
+
+    Xte, Yte = load_CIFAR_batch(os.path.join(root_dir, 'test_batch'))
+
+    if not return_classes:
+        return Xtr, Ytr, Xte, Yte
+    else:
+        meta = unpickle(os.path.join(root_dir, 'batches.meta'))
+        classes = meta['label_names']
+        return Xtr, Ytr, Xte, Yte, classes
 
 # don't use -n and -s, which are resevered for the distributed training
 def parse_args():
