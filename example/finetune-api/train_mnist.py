@@ -8,7 +8,7 @@ import argparse
 import os
 import train_model
 
-from dataset import RandomSkipResizeIter
+from dataiter import RandomSkipResizeIter
 
 def _download(data_dir):
     if not os.path.isdir(data_dir):

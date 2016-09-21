@@ -8,7 +8,7 @@ import argparse
 import os
 import train_model
 
-from dataset import RandomSkipResizeIter, RecordSimpleAugmentationIter
+from dataiter import RecordSimpleAugmentationIter
 
 # don't use -n and -s, which are resevered for the distributed training
 def parse_args():
