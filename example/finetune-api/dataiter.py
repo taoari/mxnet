@@ -327,7 +327,7 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
         if self.random_mirror and random.randint(0,1):
             img = img[:,::-1,:] # flip on x axis
         # mean_values
-        if self.mean_values:
+        if self.mean_values is not None:
             img -= np.array(self.mean_values, dtype=np.float32)
         # scale
         if self.scale and self.scale != 1.0:
