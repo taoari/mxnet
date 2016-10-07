@@ -313,6 +313,8 @@ class SGD(Optimizer):
             assert self.momentum == 0.0
             weight[:] += -lr * (grad + wd * weight)
 
+        if self.clip_gamma and self.param_names[index].endswith('relu_gamma'):
+            weight[:] = clip(weight, 0.0, 1.0)
 
 @register
 class NAG(SGD):

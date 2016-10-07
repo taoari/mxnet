@@ -765,7 +765,7 @@ class FeedForward(BASE_ESTIMATOR):
         return eval_metric.get()[1]
 
     def fit(self, X, y=None, eval_data=None, eval_metric='acc', eval_epoch=1,
-            eval_initialization=True,
+            eval_initialization=True, clip_gamma=False,
             epoch_end_callback=None, batch_end_callback=None, kvstore='local', logger=None,
             work_load_list=None, monitor=None, eval_end_callback=LogValidationMetricsCallback(),
             eval_batch_end_callback=None):
@@ -854,6 +854,9 @@ class FeedForward(BASE_ESTIMATOR):
                                    **(self.kwargs))
         elif isinstance(self.optimizer, opt.Optimizer):
             optimizer = self.optimizer
+
+        optimizer.clip_gamma = clip_gamma
+        optimizer.param_names = param_names
 
         # do training
         _train_multi_device(self.symbol, self.ctx, arg_names, param_names, aux_names,
