@@ -98,6 +98,8 @@ def proto_parser():
                         help='the name of log file')
     parser.add_argument('--monitor', type=str,
                         help='the monitor to install')
+    group_freq.add_argument('--clip-gamma', type=bool, default=False,
+                        help='clip gamma of prelu into [0,1]')
 
     return parser
 
@@ -111,7 +113,7 @@ def dict_to_arg_list(params):
             # pitfall for bool: --<key>='' is False, any non-empty string is True
             # e.g. --<key>=False and --<key>=None are still True
             if v == True:
-                arg_list.append('--' + k, 'True')
+                arg_list.extend(['--' + k, 'True'])
             else:
                 arg_list.extend(['--' + k, ''])
         elif type(v) in [str, float, int]:
