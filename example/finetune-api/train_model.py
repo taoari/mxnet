@@ -178,6 +178,7 @@ def fit(args, network, data_loader):
         symbol             = network,
         num_epoch          = args.num_epochs,
         initializer        = initializer,
+        optimizer          = args.optimizer,
         learning_rate      = args.lr,
         momentum           = args.momentum,
         wd                 = args.wd,
