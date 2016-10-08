@@ -44,6 +44,8 @@ def proto_parser():
 
     # optimizer and lr scheduler
     group_opt = parser.add_argument_group('options for optimizer and lr scheduler')
+    group_opt.add_argument('--optimizer', type=str, default='sgd',
+                        help='optimizer')
     group_opt.add_argument('--lr', type=float, default=.01,
                         help='the initial learning rate')
     group_opt.add_argument('--momentum', type=float, default=0.9,
