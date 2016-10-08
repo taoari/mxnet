@@ -270,7 +270,7 @@ class Xavier(Initializer):
             random.normal(0, scale, out=arr)
         else:
             raise ValueError("Unknown random type")
-        logging.info('Init (Xavier %s) %s with scale %s', self.rnd_type, _, scale)
+        logging.info('Init (Xavier %s %s) %s with scale %s', self.rnd_type, self.magnitude, _, scale)
 
 class MSRAPrelu(Xavier):
     """Initialize the weight with initialization scheme from
