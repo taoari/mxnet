@@ -105,6 +105,8 @@ def fit(args, network, data_loader):
     # data
     (train, val) = data_loader(args, kv)
 
+    logging.info(mx.viz.print_summary(network, shape=dict(train.provide_data), return_str=True))
+
     # train
     devs = mx.cpu() if args.gpus is None else [
         mx.gpu(int(i)) for i in args.gpus.split(',')]
