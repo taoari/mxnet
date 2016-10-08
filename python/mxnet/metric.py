@@ -400,7 +400,9 @@ def create(metric, **kwargs):
         'mae': MAE,
         'mse': MSE,
         'rmse': RMSE,
-        'top_k_accuracy': TopKAccuracy
+        'top_k_accuracy': TopKAccuracy,
+        'top3': lambda : TopKAccuracy(top_k=3),
+        'top5': lambda : TopKAccuracy(top_k=5)
     }
 
     try:
