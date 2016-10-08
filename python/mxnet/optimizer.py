@@ -123,6 +123,15 @@ class Optimizer(object):
     def update(self, index, weight, grad, state):
         """Update the parameters. override in implementations"""
 
+    def update_for_constraint(self, index, weight, grad, state):
+        """Update the parameters for constraint."""
+
+        if self.clip_gamma:
+            param_name = self.param_names[index]
+            if param_name.startswith('leakyrelu') or param_name.endswith('relu_gamma') \
+                or param_name.endswith('act_gamma'):
+                weight[:] = clip(weight, 0.0, 1.0)
+
     # pylint: disable=no-self-use
     def set_lr_scale(self, args_lrscale):
         """set lr scale is deprecated. Use set_lr_mult instead."""
@@ -312,9 +321,6 @@ class SGD(Optimizer):
         else:
             assert self.momentum == 0.0
             weight[:] += -lr * (grad + wd * weight)
-
-        if self.clip_gamma and self.param_names[index].endswith('relu_gamma'):
-            weight[:] = clip(weight, 0.0, 1.0)
 
 @register
 class NAG(SGD):
@@ -828,4 +834,5 @@ def get_updater(optimizer):
         if index not in states:
             states[index] = optimizer.create_state(index, weight)
         optimizer.update(index, weight, grad, states[index])
+        optimizer.update_for_constraint(index, weight, grad, states[index])
     return updater
