@@ -4,7 +4,7 @@
 # pylint: disable=too-many-arguments
 # pylint: disable=dangerous-default-value
 """Visualization module"""
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import re
 import copy
@@ -26,7 +26,8 @@ def _str2tuple(string):
     """
     return re.findall(r"\d+", string)
 
-def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74, 1.]):
+def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74, 1.],
+    return_str=False):
     """convert symbol for detail information
 
     Parameters
@@ -43,6 +44,12 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     ------
         void
     """
+    if return_str:
+        STR_LINES = []
+        def printf(msg):
+            STR_LINES.append(msg)
+    else:
+        printf = print_function
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be Symbol")
     show_shape = False
@@ -78,10 +85,10 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             line += str(field)
             line = line[:positions[i]]
             line += ' ' * (positions[i] - len(line))
-        print(line)
-    print('_' * line_length)
+        printf(line)
+    printf('-' * line_length)
     print_row(to_display, positions)
-    print('=' * line_length)
+    printf('=' * line_length)
     def print_layer_summary(node, out_shape):
         """print layer information
 
@@ -158,11 +165,14 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                     out_shape = shape_dict[key][1:]
         total_params += print_layer_summary(nodes[i], out_shape)
         if i == len(nodes) - 1:
-            print('=' * line_length)
+            printf('=' * line_length)
         else:
-            print('_' * line_length)
-    print('Total params: %s' % total_params)
-    print('_' * line_length)
+            printf('-' * line_length)
+    printf('Total params: %s' % total_params)
+    printf('-' * line_length)
+
+    if return_str:
+        return '\n'.join(STR_LINES)
 
 def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={},
                  hide_weights=True):
