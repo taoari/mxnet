@@ -15,14 +15,23 @@ class ConstantInitializer(mx.initializer.Initializer):
     def __init__(self, value=0.0):
         self.value = value
 
-    def _init_gamma(self, _, arr):
-        logging.info('Init (Constant) %s with value %s', _, self.value)
-        arr[:] = self.value
-    def _init_weight(self, _, arr):
-        logging.info('Init (Constant) %s with value %s', _, self.value)
-        arr[:] = self.value
-    def _init_default(self, _, arr):
-        logging.info('Init (Constant) %s with value %s', _, self.value)
+    def __call__(self, name, arr):
+        """Override () function to do Initialization
+
+        Parameters
+        ----------
+        name : str
+            name of corrosponding ndarray
+
+        arr : NDArray
+            ndarray to be Initialized
+        """
+        if not isinstance(name, mx.base.string_types):
+            raise TypeError('name must be string')
+        if not isinstance(arr, mx.nd.NDArray):
+            raise TypeError('arr must be NDArray')
+
+        logging.info('Init (Constant) %s with value %s', name, self.value)
         arr[:] = self.value
 
 def init_logger(log_file, head='%(asctime)-15s] %(message)s'):
