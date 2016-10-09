@@ -41,6 +41,12 @@ def proto_parser():
                         help='minimum image size for the shorter edge')
     group_dataset.add_argument('--max-size', type=int, default=0,
                         help='maximum image size for the shorter edge, for multi-scale augmentation')
+    group_dataset.add_argument('--random-aspect-ratio', type=float, default=0.0,
+                        help='random aspect ratio for augmentation, in [0.0,1.0].')
+    group_dataset.add_argument('--random-hls', type=str,
+                        help='random HLS for color jittering.')
+    group_dataset.add_argument('--lighting-pca-noise', type=float, default=0.0,
+                        help='lighting PCA color augmentation.')
 
     # optimizer and lr scheduler
     group_opt = parser.add_argument_group('options for optimizer and lr scheduler')

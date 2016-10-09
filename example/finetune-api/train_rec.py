@@ -41,13 +41,15 @@ if __name__ == '__main__':
         data_shape = tuple([int(i) for i in args.data_shape.split(',')])
         mean_values = [float(v) for v in args.mean_values.split(',')] if args.mean_values else None
         scale = None if args.scale == 1.0 else args.scale
+        random_hls = [float(v) for v in args.random_hls.split(',')] if args.random_hls else None
         compressed = True if args.encoding != '.raw' else False
 
         train = RecordSimpleAugmentationIter(os.path.abspath(os.path.join(args.data_dir, args.train_dataset)),
             data_shape, args.batch_size, compressed=compressed, offset_on_reset=True,
             skip_ratio=args.skip_ratio, epoch_size=int(args.num_examples/args.batch_size),
             random_mirror=True, random_crop=True, mean_values=mean_values, scale=scale, pad=args.pad,
-            min_size=args.min_size, max_size=args.max_size)
+            min_size=args.min_size, max_size=args.max_size, random_aspect_ratio=args.random_aspect_ratio,
+            random_hls=random_hls, lighting_pca_noise=args.lighting_pca_noise)
 
         if args.val_dataset:
             val = RecordSimpleAugmentationIter(os.path.abspath(os.path.join(args.data_dir, args.val_dataset)),
