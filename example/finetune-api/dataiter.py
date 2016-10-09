@@ -283,11 +283,32 @@ def get_min_size(height, width, size):
     else:
         return size, int(width*size/height)
 
+def _aug_hls(img, random_hls):
+    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+    delta = np.random.uniform(-1.0,1.0,3) * np.array([90,127,127]) * np.array(random_hls)
+    # uint8 array + float64 scalar gives float64 array
+    hls[:,:,0] = np.clip(hls[:,:,0] + delta[0], 0.0, 180)
+    hls[:,:,1] = np.clip(hls[:,:,1] + delta[1], 0.0, 255)
+    hls[:,:,2] = np.clip(hls[:,:,2] + delta[2], 0.0, 255)
+    return cv2.cvtColor(hls, cv2.COLOR_HLS2RGB)
+
+def _aug_lighting(src, alphastd):
+    # TODO: need to check
+    eigval = np.array([55.46, 4.794, 1.148])
+    eigvec = np.array([[-0.5675, 0.7192, 0.4009],
+                       [-0.5808, -0.0045, -0.8140],
+                       [-0.5836, -0.6948, 0.4203]])
+    alpha = np.random.normal(0, alphastd, size=(3,))
+    rgb = np.dot(eigvec*alpha, eigval)
+    src = src + np.array(rgb)
+    return src
+
 class RecordSimpleAugmentationIter(RecordSkipIter):
     def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False,
                  skip_ratio=0.0, epoch_size=None,
                  random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
-                 min_size=0, max_size=0, random_aspect_ratio=0.0):
+                 min_size=0, max_size=0, random_aspect_ratio=0.0,
+                 random_hls=None, lighting_pca_noise=0.0):
         super(RecordSimpleAugmentationIter, self).__init__(path_imgrec, data_shape, batch_size, compressed, offset_on_reset, skip_ratio, epoch_size)
         self.random_mirror=random_mirror
         self.random_crop=random_crop
@@ -299,6 +320,8 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
         if max_size > 0:
             assert max_size >= min_size
         self.random_aspect_ratio = random_aspect_ratio
+        self.random_hls = random_hls
+        self.lighting_pca_noise = lighting_pca_noise
 
     def _aug_img(self, img):
         # assume img RGB float32 (H,W,C)
@@ -338,6 +361,11 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
         # random_mirror
         if self.random_mirror and random.randint(0,1):
             img = img[:,::-1,:] # flip on x axis
+        # color aug (should before mean_values and scale)
+        if self.random_hls is not None:
+            img = _aug_hls(img, self.random_hls)
+        if self.lighting_pca_noise > 0.0:
+            img = _aug_lighting(img, self.lighting_pca_noise)
         # mean_values
         if self.mean_values is not None:
             img -= np.array(self.mean_values, dtype=np.float32)
