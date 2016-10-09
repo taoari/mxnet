@@ -287,7 +287,7 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
     def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False,
                  skip_ratio=0.0, epoch_size=None,
                  random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
-                 min_size=0, max_size=0):
+                 min_size=0, max_size=0, random_aspect_ratio=0.0):
         super(RecordSimpleAugmentationIter, self).__init__(path_imgrec, data_shape, batch_size, compressed, offset_on_reset, skip_ratio, epoch_size)
         self.random_mirror=random_mirror
         self.random_crop=random_crop
@@ -298,12 +298,23 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
         self.max_size = max_size
         if max_size > 0:
             assert max_size >= min_size
+        self.random_aspect_ratio = random_aspect_ratio
 
     def _aug_img(self, img):
         # assume img RGB float32 (H,W,C)
         # pad
         if self.pad > 0:
             img = cv2.copyMakeBorder(img,self.pad,self.pad,self.pad,self.pad,cv2.BORDER_REFLECT_101)
+        # resize: random_aspect_ratio
+        _h, _w = img.shape[:2]
+        if self.random_aspect_ratio > 0.0:
+            _ar = 1.0+self.random_aspect_ratio
+            aspect_ratio = random.uniform(1.0/_ar, _ar)
+            # image is always larger in size
+            if aspect_ratio > 1.0:
+                _h = int(np.round(_h*aspect_ratio))
+            else:
+                _w = int(np.round(_w/aspect_ratio))
         # resize (multi-scale): min_size and max_size
         size = None
         if self.min_size > 0 and self.max_size > 0:
@@ -312,15 +323,16 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
             size = self.min_size
         if size:
             # NOTE: OpenCV use (width, height), while Numpy use (height, width)
-            _h, _w = get_min_size(img.shape[0], img.shape[1], size)
+            _h, _w = get_min_size(_h, _w, size)
+        if _h != img.shape[0] or _w != img.shape[1]:
             img = cv2.resize(img, (_w,_h))
         # random_crop
         if self.random_crop:
             _c_y = random.randint(0, img.shape[0]-self.data_shape[1])
             _c_x = random.randint(0, img.shape[1]-self.data_shape[2])
         else:
-            _c_y = (img.shape[0]-self.data_shape[1])/2
-            _c_x = (img.shape[1]-self.data_shape[2])/2
+            _c_y = int((img.shape[0]-self.data_shape[1])/2)
+            _c_x = int((img.shape[1]-self.data_shape[2])/2)
         assert img.shape[0] >= self.data_shape[1] and img.shape[1] >= self.data_shape[2]
         img = img[_c_y:_c_y+self.data_shape[1], _c_x:_c_x+self.data_shape[2],:]
         # random_mirror
@@ -334,3 +346,57 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
             img *= self.scale
         assert img.shape == (self.data_shape[1], self.data_shape[2], self.data_shape[0])
         return img
+
+def test_aug_img():
+    # mean_values
+    rec = RecordSimpleAugmentationIter('',(3,32,32),10, mean_values=[1,1,1])
+    assert (rec._aug_img(np.ones((32,32,3))) == 0.0).all()
+    # scale
+    rec = RecordSimpleAugmentationIter('',(3,32,32),10, scale=2.0)
+    assert (rec._aug_img(np.ones((32,32,3))) == 2.0).all()
+    # pad (note that image is finally cropped)
+    rec = RecordSimpleAugmentationIter('',(3,40,40),10, pad=4)
+    assert rec._aug_img(np.ones((32,32,3))).shape == (40,40,3)
+
+    def _aug_img(self, img):
+        # assume img RGB float32 (H,W,C)
+        # pad
+        if self.pad > 0:
+            img = cv2.copyMakeBorder(img,self.pad,self.pad,self.pad,self.pad,cv2.BORDER_REFLECT_101)
+        # resize: random_aspect_ratio
+        _h, _w = img.shape[:2]
+        if self.random_aspect_ratio > 0.0:
+            _ar = 1.0+self.random_aspect_ratio
+            aspect_ratio = random.uniform(1.0/_ar, _ar)
+            # image is always larger in size
+            if aspect_ratio > 1.0:
+                _h = int(np.round(_h*aspect_ratio))
+            else:
+                _w = int(np.round(_w/aspect_ratio))
+        # resize (multi-scale): min_size and max_size
+        size = None
+        if self.min_size > 0 and self.max_size > 0:
+            size = random.randint(self.min_size, self.max_size)
+        elif self.min_size > 0:
+            size = self.min_size
+        if size:
+            # NOTE: OpenCV use (width, height), while Numpy use (height, width)
+            _h, _w = get_min_size(_h, _w, size)
+        if _h != img.shape[0] or _w != img.shape[1]:
+            img = cv2.resize(img, (_w,_h))
+        return img
+
+    # min_size
+    rec = RecordSimpleAugmentationIter('',(3,32,32),10, min_size=64)
+    assert _aug_img(rec, np.ones((32,40,3))).shape == (64,80,3)
+    assert _aug_img(rec, np.ones((40,32,3))).shape == (80,64,3)
+    # max_size
+    rec = RecordSimpleAugmentationIter('',(3,32,32),10, min_size=32, max_size=64)
+    assert 32 <= min(_aug_img(rec, np.ones((128,256,3))).shape[:2]) <= 64
+    # random_aspect_ratio
+    rec = RecordSimpleAugmentationIter('',(3,32,32),10, random_aspect_ratio=0.25)
+    img = _aug_img(rec, np.ones((32,40,3)))
+    assert img.shape[0] >= 32 and img.shape[1] >= 40
+    aspect_ratio = img.shape[0]/float(img.shape[1])
+    assert aspect_ratio != 1.0 # may fail with prob zero
+    assert 0.8 * (32.0/40) <= aspect_ratio <= 1.25 * (32.0/40)
