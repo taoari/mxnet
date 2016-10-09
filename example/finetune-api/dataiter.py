@@ -304,6 +304,29 @@ def _aug_lighting(src, alphastd):
     return src
 
 class RecordSimpleAugmentationIter(RecordSkipIter):
+    """Simple agumentation for RecordIter.
+
+    random_mirror : bool
+        Random horizontal filp.
+    random_crop : bool
+        Random crop to specified data_shape.
+    mean_values : None, float, or ndarray (length 3)
+        Substract mean_values.
+    scale : float
+        Multiple with scale, after substract mean_values
+    pad : int
+        Pad extra pixels by reflection.
+    min_size : int
+        Minimum size of the shorter edge.
+    max_size : int
+        Minimum size of the shorter edge at [min_size,max_size], for scale augmentation.
+    random_aspect_ratio : float
+        Aspect ratio augmentation, jittering aspect ratio in [1/(1+random_aspect_ratio), 1+random_aspect_ratio].
+    random_hls : None, float, or ndarray (length 3)
+        HLS color augmentation, float or ndarray in range [0,1].
+    lighting_pca_noise : float
+        Lighting color augmentation, scalar in range [0,1].
+    """
     def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False,
                  skip_ratio=0.0, epoch_size=None,
                  random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
