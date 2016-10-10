@@ -27,6 +27,8 @@ def proto_parser():
                         help='set image\'s shape')
 
     # dataset preprocessing
+    group_dataset.add_argument('--aug-level', type=int, default=0,
+                        help='augmetation level, 0,1: random_crop and random_mirror, 2: multiscale, 3: aspect ratio, 4: color.')
     group_dataset.add_argument('--mean-values', type=str,
                         help='RGB mean values to substract e.g. [123,117,104] or [123.68,116.779,103.939] (for cifar10)')
     group_dataset.add_argument('--scale', type=float, default=1.0,
