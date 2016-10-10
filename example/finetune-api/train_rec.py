@@ -30,6 +30,19 @@ if __name__ == '__main__':
     from solver_proto import update_args
     args = update_args(args, args.solver)
 
+    if args.aug_level > 0:
+        # 0,1 for random_crop and random_mirror: always applied
+        # 2: multiscale
+        if args.aug_level >= 2:
+            assert args.min_size > 0, 'min_size must be enabled for multiscale'
+            args.max_size = 480
+        # 3: aspect ratio
+        if args.aug_level >= 3:
+            args.random_aspect_ratio = 0.25 # aspect ratio jittering in [0.8,1.25]
+        # 4: color aug
+        if args.aug_level >= 4:
+            args.random_hls = 0.4
+
     # network
     import importlib
     import sys
@@ -55,7 +68,7 @@ if __name__ == '__main__':
             val = RecordSimpleAugmentationIter(os.path.abspath(os.path.join(args.data_dir, args.val_dataset)),
                 data_shape, args.batch_size, compressed=compressed, offset_on_reset=False,
                 random_mirror=False, random_crop=False, mean_values=mean_values, scale=scale, pad=0,
-                min_size=args.min_size, max_size=0) # no pad, skip_ratio, epoch_size, max_size (multi-scale) for test
+                min_size=args.min_size) # no pad, skip_ratio, epoch_size, max_size (multi-scale) for test
         else:
             logging.info('Valication dataset is not provided, hence evaluation is disabled.')
             val = None
