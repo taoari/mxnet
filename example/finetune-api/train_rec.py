@@ -41,7 +41,7 @@ if __name__ == '__main__':
             args.random_aspect_ratio = 0.25 # aspect ratio jittering in [0.8,1.25]
         # 4: color aug
         if args.aug_level >= 4:
-            args.random_hls = 0.4
+            args.random_hls = '0.4' # str
 
     # network
     import importlib
