@@ -303,6 +303,92 @@ def _aug_lighting(src, alphastd):
     src = src + np.array(rgb)
     return src
 
+def _aug_img(img, data_shape, random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
+    min_size=0, max_size=0, random_aspect_ratio=0.0,
+    random_hls=None, lighting_pca_noise=0.0):
+    # assume img RGB float32 (H,W,C)
+    # pad
+    if pad > 0:
+        img = cv2.copyMakeBorder(img,pad,pad,pad,pad,cv2.BORDER_REFLECT_101)
+    # resize: random_aspect_ratio
+    _h, _w = img.shape[:2]
+    if random_aspect_ratio > 0.0:
+        _ar = 1.0+random_aspect_ratio
+        aspect_ratio = random.uniform(1.0/_ar, _ar)
+        # image is always larger in size
+        if aspect_ratio > 1.0:
+            _h = int(np.round(_h*aspect_ratio))
+        else:
+            _w = int(np.round(_w/aspect_ratio))
+    # resize (multi-scale): min_size and max_size
+    size = None
+    if min_size > 0 and max_size > 0:
+        size = random.randint(min_size, max_size)
+    elif min_size > 0:
+        size = min_size
+    if size:
+        # NOTE: OpenCV use (width, height), while Numpy use (height, width)
+        _h, _w = get_min_size(_h, _w, size)
+    if _h != img.shape[0] or _w != img.shape[1]:
+        img = cv2.resize(img, (_w,_h))
+    # random_crop
+    if random_crop:
+        _c_y = random.randint(0, img.shape[0]-data_shape[1])
+        _c_x = random.randint(0, img.shape[1]-data_shape[2])
+    else:
+        _c_y = int((img.shape[0]-data_shape[1])/2)
+        _c_x = int((img.shape[1]-data_shape[2])/2)
+    assert img.shape[0] >= data_shape[1] and img.shape[1] >= data_shape[2]
+    img = img[_c_y:_c_y+data_shape[1], _c_x:_c_x+data_shape[2],:]
+    # random_mirror
+    if random_mirror and random.randint(0,1):
+        img = img[:,::-1,:] # flip on x axis
+    # color aug (should before mean_values and scale)
+    if random_hls is not None:
+        img = _aug_hls(img, random_hls)
+    if lighting_pca_noise > 0.0:
+        img = _aug_lighting(img, lighting_pca_noise)
+    # mean_values
+    if mean_values is not None:
+        img -= np.array(mean_values, dtype=np.float32)
+    # scale
+    if scale and scale != 1.0:
+        img *= scale
+    assert img.shape == (data_shape[1], data_shape[2], data_shape[0])
+    return img
+
+def _decode_data(buf, compressed):
+    if compressed:
+        header, img = mx.recordio.unpack_img(buf) # img: BGR uint8 (H,W,C)
+        with warnings.catch_warnings():
+            warnings.simplefilter("once")
+            if len(img.shape) == 2:
+                warnings.warn('gray image encountered')
+                img = np.dstack([img,img,img])
+            elif img.shape[2] == 4:
+                warnings.warn('BGRA image encountered')
+                img = img[:,:,:3]
+        img = img[:,:,::-1] # RGB
+    else:
+        header, img = mx.recordio.unpack(buf)
+        shape = np.fromstring(img, dtype=np.float32, count=3) # H,W,C
+        shape = tuple([int(i) for i in shape])
+        img = np.fromstring(img[12:], dtype=np.uint8).reshape(shape) # img: RGB uint8 (H,W,C)
+    assert img.shape[2] == 3
+    return img, header.label
+
+def _proc_fun(buf, compressed, data_shape,
+    random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
+    min_size=0, max_size=0, random_aspect_ratio=0.0,
+    random_hls=None, lighting_pca_noise=0.0):
+    img, lab = _decode_data(buf, compressed)
+    img = img = _aug_img(np.float32(img), data_shape,
+        random_mirror, random_crop, mean_values, scale, pad,
+        min_size, max_size, random_aspect_ratio,
+        random_hls, lighting_pca_noise)
+    img = img.transpose(2,0,1) # RGB uint8 (C,H,W)
+    return img, lab
+
 class RecordSimpleAugmentationIter(RecordSkipIter):
     """Simple agumentation for RecordIter.
 
@@ -327,12 +413,13 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
     lighting_pca_noise : float
         Lighting color augmentation, scalar in range [0,1].
     """
-    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False,
+    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False, num_thread=0,
                  skip_ratio=0.0, epoch_size=None,
                  random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
                  min_size=0, max_size=0, random_aspect_ratio=0.0,
                  random_hls=None, lighting_pca_noise=0.0):
         super(RecordSimpleAugmentationIter, self).__init__(path_imgrec, data_shape, batch_size, compressed, offset_on_reset, skip_ratio, epoch_size)
+        self.num_thread = num_thread
         self.random_mirror=random_mirror
         self.random_crop=random_crop
         self.mean_values=mean_values
@@ -346,57 +433,28 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
         self.random_hls = random_hls
         self.lighting_pca_noise = lighting_pca_noise
 
-    def _aug_img(self, img):
-        # assume img RGB float32 (H,W,C)
-        # pad
-        if self.pad > 0:
-            img = cv2.copyMakeBorder(img,self.pad,self.pad,self.pad,self.pad,cv2.BORDER_REFLECT_101)
-        # resize: random_aspect_ratio
-        _h, _w = img.shape[:2]
-        if self.random_aspect_ratio > 0.0:
-            _ar = 1.0+self.random_aspect_ratio
-            aspect_ratio = random.uniform(1.0/_ar, _ar)
-            # image is always larger in size
-            if aspect_ratio > 1.0:
-                _h = int(np.round(_h*aspect_ratio))
-            else:
-                _w = int(np.round(_w/aspect_ratio))
-        # resize (multi-scale): min_size and max_size
-        size = None
-        if self.min_size > 0 and self.max_size > 0:
-            size = random.randint(self.min_size, self.max_size)
-        elif self.min_size > 0:
-            size = self.min_size
-        if size:
-            # NOTE: OpenCV use (width, height), while Numpy use (height, width)
-            _h, _w = get_min_size(_h, _w, size)
-        if _h != img.shape[0] or _w != img.shape[1]:
-            img = cv2.resize(img, (_w,_h))
-        # random_crop
-        if self.random_crop:
-            _c_y = random.randint(0, img.shape[0]-self.data_shape[1])
-            _c_x = random.randint(0, img.shape[1]-self.data_shape[2])
+    def _parse_data_label(self, _data):
+        n_jobs = self.num_thread
+        
+        if n_jobs == 0:
+            data = []
+            label = []
+            for buf in _data:
+                img, lab = _proc_fun(buf, self.compressed, self.data_shape,
+                    self.random_mirror, self.random_crop, self.mean_values, self.scale, self.pad,
+                    self.min_size, self.max_size, self.random_aspect_ratio,
+                    self.random_hls, self.lighting_pca_noise)
+                data.append(img)
+                label.append(lab)
         else:
-            _c_y = int((img.shape[0]-self.data_shape[1])/2)
-            _c_x = int((img.shape[1]-self.data_shape[2])/2)
-        assert img.shape[0] >= self.data_shape[1] and img.shape[1] >= self.data_shape[2]
-        img = img[_c_y:_c_y+self.data_shape[1], _c_x:_c_x+self.data_shape[2],:]
-        # random_mirror
-        if self.random_mirror and random.randint(0,1):
-            img = img[:,::-1,:] # flip on x axis
-        # color aug (should before mean_values and scale)
-        if self.random_hls is not None:
-            img = _aug_hls(img, self.random_hls)
-        if self.lighting_pca_noise > 0.0:
-            img = _aug_lighting(img, self.lighting_pca_noise)
-        # mean_values
-        if self.mean_values is not None:
-            img -= np.array(self.mean_values, dtype=np.float32)
-        # scale
-        if self.scale and self.scale != 1.0:
-            img *= self.scale
-        assert img.shape == (self.data_shape[1], self.data_shape[2], self.data_shape[0])
-        return img
+            from joblib import Parallel, delayed
+            out = Parallel(n_jobs=n_jobs, backend="threading")(delayed(_proc_fun)(buf, self.compressed, self.data_shape,
+                    self.random_mirror, self.random_crop, self.mean_values, self.scale, self.pad,
+                    self.min_size, self.max_size, self.random_aspect_ratio,
+                    self.random_hls, self.lighting_pca_noise) for buf in _data)
+            data = [o[0] for o in out]
+            label = [o[1] for o in out]
+        return data, label
 
 def test_aug_img():
     # mean_values

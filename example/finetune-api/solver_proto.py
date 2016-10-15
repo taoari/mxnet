@@ -110,6 +110,8 @@ def proto_parser():
                         help='the monitor to install')
     group_freq.add_argument('--clip-gamma', type=bool, default=False,
                         help='clip gamma of prelu into [0,1]')
+    parser.add_argument('--num-thread', type=int, default=0,
+                        help='multithreading for data processing (decoding + aug): 0, sequential; >=1 multithreading')
 
     return parser
 
