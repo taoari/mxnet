@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
         train = RecordSimpleAugmentationIter(os.path.abspath(os.path.join(args.data_dir, args.train_dataset)),
             data_shape, args.batch_size, compressed=compressed, offset_on_reset=True, num_thread=args.num_thread,
-            skip_ratio=args.skip_ratio, epoch_size=int(args.num_examples/args.batch_size),
+            epoch_size=int(args.num_examples/args.batch_size), skip_ratio=args.skip_ratio,
             random_mirror=True, random_crop=True, mean_values=mean_values, scale=scale, pad=args.pad,
             min_size=args.min_size, max_size=args.max_size, random_aspect_ratio=args.random_aspect_ratio,
             random_hls=random_hls, lighting_pca_noise=args.lighting_pca_noise)
@@ -67,6 +67,7 @@ if __name__ == '__main__':
         if args.val_dataset:
             val = RecordSimpleAugmentationIter(os.path.abspath(os.path.join(args.data_dir, args.val_dataset)),
                 data_shape, args.batch_size, compressed=compressed, offset_on_reset=False, num_thread=args.num_thread,
+                epoch_size=int(args.num_eval_examples/args.batch_size),
                 random_mirror=False, random_crop=False, mean_values=mean_values, scale=scale, pad=0,
                 min_size=args.min_size) # no pad, skip_ratio, epoch_size, max_size (multi-scale) for test
         else:
