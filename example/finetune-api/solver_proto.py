@@ -10,6 +10,8 @@ def proto_parser():
                         help='dataset')
     group_dataset.add_argument('--num-examples', type=int, default=1281167,
                         help='the number of training examples')
+    group_dataset.add_argument('--num-eval-examples', type=int, default=0,
+                        help='the number of evaluating examples')
     group_dataset.add_argument('--num-classes', type=int, default=1000,
                         help='the number of classes')
     group_dataset.add_argument('--batch-size', type=int, default=32,

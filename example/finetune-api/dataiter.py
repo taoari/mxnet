@@ -161,14 +161,34 @@ class RandomSkipResizeIter(mx.io.DataIter):
     def getpad(self):
         return self.current_batch.pad
 
-class RecordIter(mx.io.DataIter):
-    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False):
-        super(RecordIter, self).__init__()
+def _decode_data(buf, compressed):
+    if compressed:
+        header, img = mx.recordio.unpack_img(buf) # img: BGR uint8 (H,W,C)
+        with warnings.catch_warnings():
+            warnings.simplefilter("once")
+            if len(img.shape) == 2:
+                warnings.warn('gray image encountered')
+                img = np.dstack([img,img,img])
+            elif img.shape[2] == 4:
+                warnings.warn('BGRA image encountered')
+                img = img[:,:,:3]
+        img = img[:,:,::-1] # RGB
+    else:
+        header, img = mx.recordio.unpack(buf)
+        shape = np.fromstring(img, dtype=np.float32, count=3) # H,W,C
+        shape = tuple([int(i) for i in shape])
+        img = np.fromstring(img[12:], dtype=np.uint8).reshape(shape) # img: RGB uint8 (H,W,C)
+    assert img.shape[2] == 3
+    return img, header.label
+
+class BaseRecordIter(mx.io.DataIter):
+    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True):
+        super(BaseRecordIter, self).__init__()
+
         self.path_imagerec = path_imgrec
         self.data_shape = data_shape
         self.batch_size = batch_size
         self.compressed = compressed
-        self.offset_on_reset = offset_on_reset
 
         self.record = mx.recordio.MXRecordIO(os.path.abspath(path_imgrec), 'r')
         self._data = None
@@ -185,13 +205,8 @@ class RecordIter(mx.io.DataIter):
 
     def reset(self):
         self.record.reset()
-        if self.offset_on_reset:
-            # avoid data batch always starting from 0, (True if training, False if testing)
-            for i in range(random.randint(0, self.batch_size-1)):
-                self.record.read()
 
     def iter_next(self):
-        # ensure that there are <batch_size> data left, otherwise return False
         self._data = []
         for i in range(self.batch_size):
             self._data.append(self.record.read())
@@ -205,27 +220,12 @@ class RecordIter(mx.io.DataIter):
     def _parse_data_label(self, _data):
         data = []
         label = []
-        for d in _data:
-            if self.compressed:
-                header, img = mx.recordio.unpack_img(d) # img: BGR uint8 (H,W,C)
-                with warnings.catch_warnings():
-                    warnings.simplefilter("once")
-                    if len(img.shape) == 2:
-                        warnings.warn('gray image encountered')
-                        img = np.dstack([img,img,img])
-                    elif img.shape[2] == 4:
-                        warnings.warn('BGRA image encountered')
-                        img = img[:,:,:3]
-                img = img[:,:,::-1] # RGB
-            else:
-                header, img = mx.recordio.unpack(d)
-                shape = np.fromstring(img, dtype=np.float32, count=3) # H,W,C
-                shape = tuple([int(i) for i in shape])
-                img = np.fromstring(img[12:], dtype=np.uint8).reshape(shape) # img: RGB uint8 (H,W,C)
-            assert img.shape[2] == 3
+        for buf in _data:
+            img, lab = _decode_data(buf, self.compressed)
             img = self._aug_img(np.float32(img))
-            data.append(img.transpose(2,0,1)) # RGB uint8 (C,H,W)
-            label.append(header.label)
+            img = img.transpose(2,0,1) # RGB uint8 (C,H,W)
+            data.append(img)
+            label.append(lab)
         return data, label
 
     def next(self):
@@ -235,32 +235,41 @@ class RecordIter(mx.io.DataIter):
         else:
             raise StopIteration
 
-class RecordSkipIter(RecordIter):
-    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False,
-                 skip_ratio=0.0, epoch_size=None):
-        super(RecordSkipIter, self).__init__(path_imgrec, data_shape, batch_size, compressed, offset_on_reset)
-        self.skip_ratio = skip_ratio
+class RecordIter(BaseRecordIter):
+    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True,
+            offset_on_reset=False, epoch_size=0, skip_ratio=0.0):
+        super(RecordIter, self).__init__(path_imgrec, data_shape, batch_size, compressed)
+
+        self.offset_on_reset = offset_on_reset
         self.epoch_size = epoch_size
+        self.skip_ratio = skip_ratio
+        if skip_ratio > 0.0:
+            assert epoch_size > 0, 'epoch size must be postive when skip_ratio is enabled'
+
         self.cur = 0
 
-        assert skip_ratio >= 0.0 and skip_ratio < 1.0
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            if self.epoch_size is not None:
-                assert self.epoch_size > 0
-                if self.offset_on_reset and self.skip_ratio > 0.0:
-                    warnings.warn('when skip_ratio > 0.0, offset_on_reset is automatically disabled')
-                    self.offset_on_reset = False
+    def _offset(self):
+        if self.offset_on_reset:
+            # avoid data batch always starting from 0, (True if training, False if testing)
+            for i in range(random.randint(0, self.batch_size-1)):
+                self.record.read()
 
     def reset(self):
-        if self.epoch_size is None:
-            super(RecordSkipIter, self).reset()
+        if not self.epoch_size:
+            self.record.reset()
+            self._offset()
         else:
             self.cur = 0
 
     def iter_next(self):
-        if self.epoch_size is None:
-            return super(RecordSkipIter, self).iter_next() # do not forget return
+        if not self.epoch_size:
+            # ensure that there are <batch_size> data left, otherwise return False
+            self._data = []
+            for i in range(self.batch_size):
+                self._data.append(self.record.read())
+                if self._data[-1] is None:
+                    return False
+            return True
         else:
             if self.cur < self.epoch_size:
                 self._data = []
@@ -268,9 +277,10 @@ class RecordSkipIter(RecordIter):
                     s = self.record.read()
                     if s is None:
                         self.record.reset()
+                        self._offset()
                         s = self.record.read()
                     # logic: if skip_ratio == 0, no drop
-                    if random.random() >= self.skip_ratio:
+                    if self.skip_ratio == 0.0 or random.random() >= self.skip_ratio:
                         self._data.append(s)
                 self.cur += 1
                 return True
@@ -357,26 +367,6 @@ def _aug_img(img, data_shape, random_mirror=False, random_crop=False, mean_value
     assert img.shape == (data_shape[1], data_shape[2], data_shape[0])
     return img
 
-def _decode_data(buf, compressed):
-    if compressed:
-        header, img = mx.recordio.unpack_img(buf) # img: BGR uint8 (H,W,C)
-        with warnings.catch_warnings():
-            warnings.simplefilter("once")
-            if len(img.shape) == 2:
-                warnings.warn('gray image encountered')
-                img = np.dstack([img,img,img])
-            elif img.shape[2] == 4:
-                warnings.warn('BGRA image encountered')
-                img = img[:,:,:3]
-        img = img[:,:,::-1] # RGB
-    else:
-        header, img = mx.recordio.unpack(buf)
-        shape = np.fromstring(img, dtype=np.float32, count=3) # H,W,C
-        shape = tuple([int(i) for i in shape])
-        img = np.fromstring(img[12:], dtype=np.uint8).reshape(shape) # img: RGB uint8 (H,W,C)
-    assert img.shape[2] == 3
-    return img, header.label
-
 def _proc_fun(buf, compressed, data_shape,
     random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
     min_size=0, max_size=0, random_aspect_ratio=0.0,
@@ -405,7 +395,7 @@ def _proc_fun_batch(buf_batch, compressed, data_shape,
         res.append((img, lab))
     return res
 
-class RecordSimpleAugmentationIter(RecordSkipIter):
+class RecordSimpleAugmentationIter(RecordIter):
     """Simple agumentation for RecordIter.
 
     random_mirror : bool
@@ -429,12 +419,14 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
     lighting_pca_noise : float
         Lighting color augmentation, scalar in range [0,1].
     """
-    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True, offset_on_reset=False, num_thread=0,
-                 skip_ratio=0.0, epoch_size=None,
+    def __init__(self, path_imgrec, data_shape, batch_size, compressed=True,
+                 offset_on_reset=False, num_thread=0, epoch_size=0, skip_ratio=0.0,
                  random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
                  min_size=0, max_size=0, random_aspect_ratio=0.0,
                  random_hls=None, lighting_pca_noise=0.0):
-        super(RecordSimpleAugmentationIter, self).__init__(path_imgrec, data_shape, batch_size, compressed, offset_on_reset, skip_ratio, epoch_size)
+        super(RecordSimpleAugmentationIter, self).__init__(path_imgrec, data_shape, batch_size, compressed,
+            offset_on_reset, epoch_size, skip_ratio)
+
         self.num_thread = num_thread
         self.random_mirror=random_mirror
         self.random_crop=random_crop
