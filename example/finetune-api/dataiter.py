@@ -381,6 +381,7 @@ def _proc_fun(buf, compressed, data_shape,
     random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
     min_size=0, max_size=0, random_aspect_ratio=0.0,
     random_hls=None, lighting_pca_noise=0.0):
+
     img, lab = _decode_data(buf, compressed)
     img = _aug_img(np.float32(img), data_shape,
         random_mirror, random_crop, mean_values, scale, pad,
@@ -388,6 +389,21 @@ def _proc_fun(buf, compressed, data_shape,
         random_hls, lighting_pca_noise)
     img = img.transpose(2,0,1) # RGB uint8 (C,H,W)
     return img, lab
+
+def _proc_fun_batch(buf_batch, compressed, data_shape,
+    random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
+    min_size=0, max_size=0, random_aspect_ratio=0.0,
+    random_hls=None, lighting_pca_noise=0.0):
+    res = []
+    for buf in buf_batch:
+        img, lab = _decode_data(buf, compressed)
+        img = _aug_img(np.float32(img), data_shape,
+            random_mirror, random_crop, mean_values, scale, pad,
+            min_size, max_size, random_aspect_ratio,
+            random_hls, lighting_pca_noise)
+        img = img.transpose(2,0,1) # RGB uint8 (C,H,W)
+        res.append((img, lab))
+    return res
 
 class RecordSimpleAugmentationIter(RecordSkipIter):
     """Simple agumentation for RecordIter.
@@ -435,7 +451,7 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
 
     def _parse_data_label(self, _data):
         n_jobs = self.num_thread
-        
+
         if n_jobs == 0:
             data = []
             label = []
@@ -447,11 +463,20 @@ class RecordSimpleAugmentationIter(RecordSkipIter):
                 data.append(img)
                 label.append(lab)
         else:
+            def split(l, n):
+                return [l[i:i + n] for i in range(0, len(l), n)]
+
+            def join(ll):
+                return [item for sublist in ll for item in sublist]
+
             from joblib import Parallel, delayed
-            out = Parallel(n_jobs=n_jobs, backend="threading")(delayed(_proc_fun)(buf, self.compressed, self.data_shape,
+            # thread is created per batch, rather than per item
+            out = Parallel(n_jobs=n_jobs, backend="threading")(delayed(_proc_fun_batch)(buf, self.compressed, self.data_shape,
                     self.random_mirror, self.random_crop, self.mean_values, self.scale, self.pad,
                     self.min_size, self.max_size, self.random_aspect_ratio,
-                    self.random_hls, self.lighting_pca_noise) for buf in _data)
+                    self.random_hls, self.lighting_pca_noise) for buf in split(_data, n_jobs))
+            out = join(out)
+            # end multi-threading
             data = [o[0] for o in out]
             label = [o[1] for o in out]
         return data, label
