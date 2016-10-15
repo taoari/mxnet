@@ -382,7 +382,7 @@ def _proc_fun(buf, compressed, data_shape,
     min_size=0, max_size=0, random_aspect_ratio=0.0,
     random_hls=None, lighting_pca_noise=0.0):
     img, lab = _decode_data(buf, compressed)
-    img = img = _aug_img(np.float32(img), data_shape,
+    img = _aug_img(np.float32(img), data_shape,
         random_mirror, random_crop, mean_values, scale, pad,
         min_size, max_size, random_aspect_ratio,
         random_hls, lighting_pca_noise)
