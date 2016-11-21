@@ -105,6 +105,7 @@ class Optimizer(object):
         self.num_update = begin_num_update
         self._index_update_count = {}
         self.clip_gradient = clip_gradient
+        self.clip_gamma = False
 
         if param_idx2name is None:
             param_idx2name = {}
