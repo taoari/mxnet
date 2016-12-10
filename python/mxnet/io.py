@@ -411,7 +411,9 @@ class NDArrayIter(DataIter):
     batch_size: int
         Batch Size
     shuffle: bool
-        Whether to shuffle the data
+        Whether to shuffle the data (initial)
+    shuffle_on_reset: bool
+        Whether to shuffle the data (when reset is called)
     last_batch_handle: 'pad', 'discard' or 'roll_over'
         How to handle the last batch
 
@@ -421,7 +423,7 @@ class NDArrayIter(DataIter):
     the size of data does not match batch_size. Roll over is intended
     for training and can cause problems if used for prediction.
     """
-    def __init__(self, data, label=None, batch_size=1, shuffle=False,
+    def __init__(self, data, label=None, batch_size=1, shuffle=False, shuffle_on_reset=False,
                  last_batch_handle='pad', label_name='softmax_label'):
         # pylint: disable=W0201
 
@@ -432,6 +434,7 @@ class NDArrayIter(DataIter):
 
         # shuffle data
         self.shuffle = shuffle
+        self.shuffle_on_reset = shuffle_on_reset
         if self.shuffle:
             idx = np.arange(self.data[0][1].shape[0])
             np.random.shuffle(idx)
@@ -481,12 +484,12 @@ class NDArrayIter(DataIter):
 
     def reset(self):
         # shuffle data
-        if self.shuffle:
+        if self.shuffle_on_reset:
             idx = np.arange(self.data[0][1].shape[0])
             np.random.shuffle(idx)
             self.data = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.data]
             self.label = [(k, array(v.asnumpy()[idx], v.context)) for k, v in self.label]
-            
+
         if self.last_batch_handle == 'roll_over' and self.cursor > self.num_data:
             self.cursor = -self.batch_size + (self.cursor%self.num_data)%self.batch_size
         else:
