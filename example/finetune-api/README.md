@@ -151,6 +151,7 @@ wd: 0.0001
 
 display: 50
 eval_epoch: 1
+eval_metric: ce,acc,top5 # logging top-5 accuracy
 checkpoint_epoch: 2 # 4h/epoch on 4GPU
 num_epochs: 100
 model_prefix: imagenet_resnet50
