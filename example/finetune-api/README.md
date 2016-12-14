@@ -1,15 +1,14 @@
 Unified Training and Transfer Learning API (Caffe-flavored)
 ======================================
 
-Setup
------
+### Setup
 
 Simply add `<mxnet_root>/example/finetune-api` into the `PATH` variable.
 
 Training Examples
 -----------------
 
-**Train on the MNIST dataset (MLP)**
+### Train on the MNIST dataset (MLP)
 
 ```
 train_mnist.py --solver mnist_mlp.yml --gpus 0
@@ -44,7 +43,7 @@ initializer: msra
 # monitor: ".*weight"
 ```
 
-**Train on the MNIST dataset (LeNet)**
+### Train on the MNIST dataset (LeNet)
 
 ```
 train_mnist.py --solver mnist_lenet.yml --gpus 0
@@ -79,7 +78,7 @@ initializer: msra
 # monitor: ".*weight"
 ```
 
-**Train on the Cifar10 dataset**
+### Train on the Cifar10 dataset
 
 ```
 train_cifar10.py --solver solver_8.yml --gpus 0
@@ -118,7 +117,7 @@ kv_store: local
 initializer: msra
 ```
 
-**Train on the ImageNet dataset**
+### Train on the ImageNet dataset
 
 ```
 train_rec.py --solver solver_50.yml --gpus 0,1,2,3
@@ -164,7 +163,7 @@ num_thread: 4 # multi-thread for decoding and resizing images
 Transfer Learning Examples
 --------------------------
 
-**Finetune Caltech101 with the pre-trained Inception-BN network**
+### Finetune Caltech101 with the pre-trained Inception-BN network
 
 ```
 train_rec.py --solver finetune_caltech101_inception.yml --gpus 0
@@ -206,7 +205,7 @@ kv_store: local
 initializer: msra
 ```
 
-**Finetune Caltech101 with the pre-trained VGG16 network**
+### Finetune Caltech101 with the pre-trained VGG16 network
 
 ```
 train_rec.py --solver finetune_caltech101_vgg16.yml --gpus 0
