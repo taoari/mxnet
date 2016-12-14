@@ -1,4 +1,4 @@
-Transfer Learning API (Caffe-flavored)
+Unified Training and Transfer Learning API (Caffe-flavored)
 ======================================
 
 Setup
@@ -6,10 +6,45 @@ Setup
 
 Simply add `<mxnet_root>/example/finetune-api` into the `PATH` variable.
 
-Examples
---------
+Training Examples
+-----------------
 
-**Train on the MNIST dataset**
+**Train on the MNIST dataset (MLP)**
+
+```
+train_mnist.py --solver mnist_mlp.yml --gpus 0
+```
+
+* mnist_mlp.yml
+
+```
+network: mlp
+
+data_dir: ../data/mnist/
+dataset: mnist
+num_classes: 10
+num_examples: 60000
+batch_size: 128
+data_shape: 784 # flatten the data_shape: 784 = 28x28
+
+lr: 0.01
+lr_factor: 0.9
+lr_factor_epoch: 2,5
+momentum: 0.9
+wd: 0.00005
+
+display: 50
+eval_epoch: 1
+checkpoint_epoch: 5
+num_epochs: 10
+model_prefix: mnist_mlp
+
+kv_store: local
+initializer: msra
+# monitor: ".*weight"
+```
+
+**Train on the MNIST dataset (LeNet)**
 
 ```
 train_mnist.py --solver mnist_lenet.yml --gpus 0
@@ -18,16 +53,19 @@ train_mnist.py --solver mnist_lenet.yml --gpus 0
 * mnist_lenet.yml
 
 ```
+network: lenet
+
 data_dir: ../data/mnist/
 dataset: mnist
 num_classes: 10
 num_examples: 60000
 batch_size: 128
+data_shape: 1,28,28 # setup the correct data_shape: 28x28 gray images
 
 lr: 0.01
 lr_factor: 0.9
 lr_factor_epoch: 2,5
-momentum: 0.8
+momentum: 0.9
 wd: 0.00005
 
 display: 50
@@ -37,15 +75,99 @@ num_epochs: 10
 model_prefix: mnist_lenet
 
 kv_store: local
-network: lenet
 initializer: msra
 # monitor: ".*weight"
 ```
 
+**Train on the Cifar10 dataset**
+
+```
+train_cifar10.py --solver solver_8.yml --gpus 0
+```
+
+* solver_8.yml
+
+```
+network: resnet-cifar
+network_kwargs: "{'num_block': 1, 'bottleneck': False}"
+
+data_dir: ../data/cifar10/cifar-10-batches-py
+dataset: cifar10
+num_classes: 10
+num_examples: 50000
+batch_size: 256
+data_shape: 3,32,32 # 32x32 RGB images
+
+pad: 4
+# mean_values: 123,117,104
+# scale: 0.01667 # 1/60.
+
+lr: 0.1
+lr_factor: 0.1
+lr_factor_epoch: 80,120
+momentum: 0.9
+wd: 0.0001
+
+display: 50
+eval_epoch: 8
+checkpoint_epoch: 40
+num_epochs: 320 # 64000 iters * 256 batch_size / 50000 samples = 327.68 epochs
+model_prefix: cifar_resnet8 # 6n+2 layers, n=num_block, or 9n+2 layers with bottleneck
+
+kv_store: local
+initializer: msra
+```
+
+**Train on the ImageNet dataset**
+
+```
+train_rec.py --solver solver_50.yml --gpus 0,1,2,3
+```
+
+* solver_50.yml
+
+```
+network: resnet-imagenet
+network_kwargs: "{'depth': 50}"
+
+dataset: imagenet
+data_dir: ../data/imagenet
+train_dataset: train_ori.rec
+val_dataset: val_ori.rec
+
+data_shape: 3,224,224
+num_classes: 1000
+num_examples: 1281167
+batch_size: 256
+
+# mean_values: 123,117,104 # BatchNorm to accumulate mean and var
+min_size: 256 # min_size and max_size for scale augmentation
+max_size: 480
+
+lr: 0.1
+lr_factor: 0.1
+lr_factor_epoch: 30
+momentum: 0.9
+wd: 0.0001
+
+display: 50
+eval_epoch: 1
+checkpoint_epoch: 2 # 4h/epoch on 4GPU
+num_epochs: 100
+model_prefix: imagenet_resnet50
+
+kv_store: local
+initializer: msra
+num_thread: 4 # multi-thread for decoding and resizing images
+```
+
+Transfer Learning Examples
+--------------------------
+
 **Finetune Caltech101 with the pre-trained Inception-BN network**
 
 ```
-train_imagenet.py --solver finetune_caltech101_inception.yml --gpus 0
+train_rec.py --solver finetune_caltech101_inception.yml --gpus 0
 ```
 
 * finetune_caltech101_inception.yml
@@ -53,31 +175,41 @@ train_imagenet.py --solver finetune_caltech101_inception.yml --gpus 0
 ```
 network: inception-bn
 
-data_dir: ../data/caltech101
 dataset: caltech101
+data_dir: ../data/caltech101
+train_dataset: train_ori.rec
+val_dataset: val_ori.rec
+
+data_shape: 3,224,224
 num_classes: 102
 num_examples: 3060
 batch_size: 25
 
+mean_values: 123,117,104
+min_size: 256
+
 lr: 0.0005
 lr_factor: 0.1
-lr_factor_epoch: 320
+lr_factor_epoch: 160
 momentum: 0.9
 wd: 0.0005
 
-num_epochs: 800
-kv_store: local
+display: 50
+eval_epoch: 8
+checkpoint_epoch: 80
+num_epochs: 400 # 2.5x lr_factor_epoch
 
 model_prefix: finetune_caltech101_inception
 finetune_from: ../share/inception-bn/Inception_BN-0039.params
-checkpoint_epoch: 80
-eval_epoch: 16
+
+kv_store: local
+initializer: msra
 ```
 
 **Finetune Caltech101 with the pre-trained VGG16 network**
 
 ```
-train_imagenet.py --solver finetune_caltech101_vgg16.yml --gpus 0
+train_rec.py --solver finetune_caltech101_vgg16.yml --gpus 0
 ```
 
 * finetune_caltech101_vgg16.yml
@@ -85,25 +217,35 @@ train_imagenet.py --solver finetune_caltech101_vgg16.yml --gpus 0
 ```
 network: vgg16
 
-data_dir: ../data/caltech101
 dataset: caltech101
+data_dir: ../data/caltech101
+train_dataset: train_ori.rec
+val_dataset: val_ori.rec
+
+data_shape: 3,224,224
 num_classes: 102
 num_examples: 3060
 batch_size: 25
 
+mean_values: 123,117,104
+min_size: 256
+
 lr: 0.0005
 lr_factor: 0.1
-lr_factor_epoch: 320
+lr_factor_epoch: 160
 momentum: 0.9
 wd: 0.0005
 
-num_epochs: 800
-kv_store: local
+display: 50
+eval_epoch: 8
+checkpoint_epoch: 80
+num_epochs: 400 # 2.5x lr_factor_epoch
 
 model_prefix: finetune_caltech101_vgg16
-finetune_from: ../share/vgg16/vgg16-0001.params
-checkpoint_epoch: 80
-eval_epoch: 16
+finetune_from: ../share/vgg/vgg16-0001.params
+
+kv_store: local
+initializer: msra
 ```
 
 Appendix
