@@ -298,10 +298,11 @@ def get_min_size(height, width, size):
         return size, int(width*size/height)
 
 def _aug_hls(img, random_hls):
+    assert img.dtype == np.uint8, '_aug_hls is only valid for uint8 images'
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
     delta = np.random.uniform(-1.0,1.0,3) * np.array([90,127,127]) * np.array(random_hls)
     # uint8 array + float64 scalar gives float64 array
-    hls[:,:,0] = np.clip(hls[:,:,0] + delta[0], 0.0, 180)
+    hls[:,:,0] = (hls[:,:,0] + delta[0]) % 180 # circular hue
     hls[:,:,1] = np.clip(hls[:,:,1] + delta[1], 0.0, 255)
     hls[:,:,2] = np.clip(hls[:,:,2] + delta[2], 0.0, 255)
     return cv2.cvtColor(hls, cv2.COLOR_HLS2RGB)
@@ -499,6 +500,15 @@ def test_aug_img():
     rec = RecordSimpleAugmentationIter('',(3,40,40),10, pad=4)
     assert rec._aug_img(np.ones((32,32,3))).shape == (40,40,3)
 
+    # aug lighting
+    from skimage.data import astronaut
+    import matplotlib.pyplot as plt
+    img = astronaut()[:480] # (480,512,3)
+    # img_aug_hls = _aug_hls(img, 0.4)
+    # plt.imshow(img_aug_hls)
+    rec = RecordSimpleAugmentationIter('',(3,480,480),10, random_hls=0.4)
+    plt.imshow(rec._aug_img(img))
+
     def _aug_img(self, img):
         # same code, but remove random crop
         # assume img RGB float32 (H,W,C)
@@ -542,3 +552,5 @@ def test_aug_img():
     aspect_ratio = img.shape[0]/float(img.shape[1])
     assert aspect_ratio != 1.0 # may fail with prob zero
     assert 0.8 * (32.0/40) <= aspect_ratio <= 1.25 * (32.0/40)
+
+
