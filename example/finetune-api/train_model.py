@@ -10,6 +10,20 @@ def monitor_stats(d):
     stats[:] = np.array([dd.mean(), dd.std(), dd.min(), dd.max()])
     return stats # [mx.nd.min(d), mx.nd.max(d)]
 
+def load_params_from_file(fname):
+    save_dict = mx.ndarray.load(fname)
+    arg_params = {}
+    aux_params = {}
+    for k, value in save_dict.items():
+        arg_type, name = k.split(':', 1)
+        if arg_type == 'arg':
+            arg_params[name] = value
+        elif arg_type == 'aux':
+            aux_params[name] = value
+        else:
+            raise ValueError("Invalid param file " + fname)
+    return arg_params, aux_params
+
 class ConstantInitializer(mx.initializer.Initializer):
     def __init__(self, value=0.0):
         self.value = value
@@ -145,10 +159,11 @@ def fit(args, network, data_loader):
 
     if args.load_epoch is not None:
         assert model_prefix is not None
-        tmp = mx.model.FeedForward.load(model_prefix, args.load_epoch)
-        logging.info('loading from %s-%04d.params', model_prefix, args.load_epoch)
-        model_args = {'arg_params' : tmp.arg_params,
-                      'aux_params' : tmp.aux_params,
+        param_file = '%s-%04d.params' % (model_prefix, args.load_epoch)
+        arg_params, aux_params = load_params_from_file(param_file)
+        logging.info('loading from %s', param_file)
+        model_args = {'arg_params' : arg_params,
+                      'aux_params' : aux_params,
                       'begin_epoch' : args.load_epoch,
                       'begin_num_update' : epoch_size * args.load_epoch}
         # TODO: check epoch_size for 'dist_sync'
@@ -156,12 +171,10 @@ def fit(args, network, data_loader):
     elif args.finetune_from is not None:
         # load_epoch has higher priority than finetune_from
         assert args.finetune_from.endswith('.params')
-        finetune_from_prefix, finetune_from_epoch = args.finetune_from[:-len('.params')].rsplit('-', 1)
-        finetune_from_epoch = int(finetune_from_epoch)
+        arg_params, aux_params = load_params_from_file(args.finetune_from)
         logging.info('finetuning from %s', args.finetune_from)
-        tmp = mx.model.FeedForward.load(finetune_from_prefix, finetune_from_epoch)
-        model_args = {'arg_params' : tmp.arg_params,
-                      'aux_params' : tmp.aux_params}
+        model_args = {'arg_params' : arg_params,
+                      'aux_params' : aux_params}
 
     # save model
     checkpoint = None if model_prefix is None else mx.callback.do_checkpoint(model_prefix, args.checkpoint_epoch)
