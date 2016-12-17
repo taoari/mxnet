@@ -271,6 +271,7 @@ class BaseModule(object):
         return output_list
 
     def fit(self, train_data, eval_data=None, eval_metric='acc',
+            eval_epoch=1, eval_initialization=True,
             epoch_end_callback=None, batch_end_callback=None, kvstore='local',
             optimizer='sgd', optimizer_params=(('learning_rate', 0.01),),
             eval_batch_end_callback=None, initializer=Uniform(0.01),
@@ -287,6 +288,10 @@ class BaseModule(object):
             after each epoch.
         eval_metric : str or EvalMetric
             Default `'acc'`. The performance measure used to display during training.
+        eval_epoch : int, optional
+            The evaluation period, evaluate for every specified epochs.
+        eval_initialization : bool, optional
+            Whether to evaluate at initial.
         epoch_end_callback : function or list of function
             Each callback will be called with the current `epoch`, `symbol`, `arg_params`
             and `aux_params`.
@@ -343,6 +348,14 @@ class BaseModule(object):
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
 
+        # eval initialization
+        if eval_data and eval_initialization:
+            epoch = begin_epoch-1
+            res = self.score(eval_data, validation_metric,
+                             batch_end_callback=eval_batch_end_callback, epoch=epoch)
+            for name, val in res:
+                self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
+
         ################################################################################
         # training loop
         ################################################################################
@@ -372,6 +385,13 @@ class BaseModule(object):
             toc = time.time()
             self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
 
+            # logging learning rate
+            if self._optimizer.lr_scheduler:
+                self.logger.info('Epoch[%d] lr = %f', epoch,
+                    self._optimizer.lr_scheduler(self._optimizer.num_update))
+            else:
+                self.logger.info('Epoch[%d] lr = %f', epoch, self._optimizer.lr)
+
             if epoch_end_callback is not None:
                 arg_params, aux_params = self.get_params()
                 for callback in _as_list(epoch_end_callback):
@@ -379,7 +399,7 @@ class BaseModule(object):
 
             #----------------------------------------
             # evaluation on validation set
-            if eval_data:
+            if eval_data and (epoch+1) % eval_epoch == 0:
                 res = self.score(eval_data, validation_metric,
                                  batch_end_callback=eval_batch_end_callback, epoch=epoch)
                 for name, val in res:
