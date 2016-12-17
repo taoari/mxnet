@@ -30,18 +30,18 @@ if __name__ == '__main__':
     from solver_proto import update_args
     args = update_args(args, args.solver)
 
-    if args.aug_level > 0:
-        # 0,1 for random_crop and random_mirror: always applied
-        # 2: multiscale
-        if args.aug_level >= 2:
-            assert args.min_size > 0, 'min_size must be enabled for multiscale'
-            args.max_size = 480
-        # 3: aspect ratio
-        if args.aug_level >= 3:
-            args.random_aspect_ratio = 0.25 # aspect ratio jittering in [0.8,1.25]
-        # 4: color aug
-        if args.aug_level >= 4:
-            args.random_hls = '0.4' # str
+    # if args.aug_level > 0:
+    #     # 0,1 for random_crop and random_mirror: always applied
+    #     # 2: multiscale
+    #     if args.aug_level >= 2:
+    #         assert args.min_size > 0, 'min_size must be enabled for multiscale'
+    #         args.max_size = 480
+    #     # 3: aspect ratio
+    #     if args.aug_level >= 3:
+    #         args.random_aspect_ratio = 0.25 # aspect ratio jittering in [0.8,1.25]
+    #     # 4: color aug
+    #     if args.aug_level >= 4:
+    #         args.random_hls = '0.4' # str
 
     # network
     import importlib
