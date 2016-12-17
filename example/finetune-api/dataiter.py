@@ -321,8 +321,15 @@ def _aug_lighting(src, alphastd):
 def _aug_img(img, data_shape, random_mirror=False, random_crop=False, mean_values=None, scale=None, pad=0,
     min_size=0, max_size=0, random_aspect_ratio=0.0,
     random_hls=None, lighting_pca_noise=0.0):
-    # assume img RGB float32 (H,W,C)
+    # input RGB uint8 (H,W,C) image, output RGB float32 (H,W,C) image
     # data_shape is in (C,H,W)
+    ### valid only for uint8 images
+    # color aug (should before mean_values and scale)
+    if random_hls is not None:
+        img = _aug_hls(img, random_hls)
+    if lighting_pca_noise > 0.0:
+        img = _aug_lighting(img, lighting_pca_noise)
+    ### valid for both uint8 and float32 images
     # pad
     if pad > 0:
         img = cv2.copyMakeBorder(img,pad,pad,pad,pad,cv2.BORDER_REFLECT_101)
@@ -359,11 +366,8 @@ def _aug_img(img, data_shape, random_mirror=False, random_crop=False, mean_value
     # random_mirror
     if random_mirror and random.randint(0,1):
         img = img[:,::-1,:] # flip on x axis
-    # color aug (should before mean_values and scale)
-    if random_hls is not None:
-        img = _aug_hls(img, random_hls)
-    if lighting_pca_noise > 0.0:
-        img = _aug_lighting(img, lighting_pca_noise)
+    ### valid only for float32 images
+    img = np.float32(img)
     # mean_values
     if mean_values is not None:
         img -= np.array(mean_values, dtype=np.float32)
@@ -379,7 +383,7 @@ def _proc_fun(buf, compressed, data_shape,
     random_hls=None, lighting_pca_noise=0.0):
 
     img, lab = _decode_data(buf, compressed)
-    img = _aug_img(np.float32(img), data_shape,
+    img = _aug_img(img, data_shape,
         random_mirror, random_crop, mean_values, scale, pad,
         min_size, max_size, random_aspect_ratio,
         random_hls, lighting_pca_noise)
@@ -393,7 +397,7 @@ def _proc_fun_batch(buf_batch, compressed, data_shape,
     res = []
     for buf in buf_batch:
         img, lab = _decode_data(buf, compressed)
-        img = _aug_img(np.float32(img), data_shape,
+        img = _aug_img(img, data_shape,
             random_mirror, random_crop, mean_values, scale, pad,
             min_size, max_size, random_aspect_ratio,
             random_hls, lighting_pca_noise)
