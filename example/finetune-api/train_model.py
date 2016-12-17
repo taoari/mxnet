@@ -105,7 +105,7 @@ def fit(args, network, data_loader):
     # kvstore
     kv = mx.kvstore.create(args.kv_store)
 
-    # logging (Tao: auto logging and machine info)
+    # logging arguments and machine info
     head = '%(asctime)-15s Node[' + str(kv.rank) + '] %(message)s'
     if 'log_file' in args and args.log_file is not None:
         init_logger(args.log_file, head)
@@ -124,11 +124,24 @@ def fit(args, network, data_loader):
     except Exception:
         pass
 
-    # load model (Tao: resume or finetune)
+    # data
+    (train, val) = data_loader(args, kv)
+
+    # logging network summary
+    logging.info('\n'+mx.viz.print_summary(network, shape=dict(train.provide_data), return_str=True))
+
+    # epoch_size
+    model_args = {}
+    epoch_size = args.num_examples / args.batch_size
+
+    if args.kv_store == 'dist_sync':
+        epoch_size /= kv.num_workers
+        model_args['epoch_size'] = epoch_size
+
+    # load model (resume or finetune)
     model_prefix = args.model_prefix
     if model_prefix is not None:
         model_prefix += "-%d" % (kv.rank)
-    model_args = {}
 
     if args.load_epoch is not None:
         assert model_prefix is not None
@@ -136,11 +149,9 @@ def fit(args, network, data_loader):
         logging.info('loading from %s-%04d.params', model_prefix, args.load_epoch)
         model_args = {'arg_params' : tmp.arg_params,
                       'aux_params' : tmp.aux_params,
-                      'begin_epoch' : args.load_epoch}
-
+                      'begin_epoch' : args.load_epoch,
+                      'begin_num_update' : epoch_size * args.load_epoch}
         # TODO: check epoch_size for 'dist_sync'
-        epoch_size = args.num_examples / args.batch_size
-        model_args['begin_num_update'] = epoch_size * args.load_epoch
 
     elif args.finetune_from is not None:
         # load_epoch has higher priority than finetune_from
@@ -152,25 +163,14 @@ def fit(args, network, data_loader):
         model_args = {'arg_params' : tmp.arg_params,
                       'aux_params' : tmp.aux_params}
 
-    # save model (Tao: checkpoint with checkpoint_epoch)
+    # save model
     checkpoint = None if model_prefix is None else mx.callback.do_checkpoint(model_prefix, args.checkpoint_epoch)
-
-    # data
-    (train, val) = data_loader(args, kv)
-
-    logging.info('\n'+mx.viz.print_summary(network, shape=dict(train.provide_data), return_str=True))
 
     # train
     devs = mx.cpu() if args.gpus is None else [
         mx.gpu(int(i)) for i in args.gpus.split(',')]
 
-    epoch_size = args.num_examples / args.batch_size
-
-    if args.kv_store == 'dist_sync':
-        epoch_size /= kv.num_workers
-        model_args['epoch_size'] = epoch_size
-
-    # (Tao: MultiFactorScheduler support)
+    # lr_scheduler
     if 'lr_factor' in args and args.lr_factor < 1:
         lr_factor_epoch = [float(_fe) for _fe in args.lr_factor_epoch.split(',')]
         if len(lr_factor_epoch) == 1:
@@ -202,28 +202,36 @@ def fit(args, network, data_loader):
     else:
         mon = None
 
-    model = mx.model.FeedForward(
-        ctx                = devs,
-        symbol             = network,
-        num_epoch          = args.num_epochs,
-        initializer        = initializer,
-        optimizer          = args.optimizer,
-        learning_rate      = args.lr,
-        momentum           = args.momentum,
-        wd                 = args.wd,
-        **model_args)
+    mod = mx.module.Module(
+        symbol              = network,
+        label_names         = ['softmax_label'],
+        context             = devs)
+    mod.bind(data_shapes=train.provide_data, label_shapes=train.provide_label)
+    mod.init_params(initializer=initializer, arg_params=model_args['arg_params'] if 'arg_params' in model_args else None,
+                    aux_params=model_args['aux_params'] if 'aux_params' in model_args else None,
+                    allow_missing=True)
+    mod.init_optimizer(kvstore=kv,
+        optimizer=args.optimizer,
+        optimizer_params={
+        'learning_rate': args.lr,
+        'momentum': args.momentum,
+        'wd': args.wd,
+        'lr_scheduler': model_args['lr_scheduler'],
+        'begin_num_update': model_args['begin_num_update'] if 'begin_num_update' in model_args else 0,
+        'clip_gradient': model_args['clip_gradient'],
+        })
 
-    # (Tao: eval_epoch support, eval_metric and display)
-    model.fit(
-        X                  = train,
+    mod.fit(
+        train_data         = train,
         eval_data          = val,
-        kvstore            = kv,
-        monitor            = mon,
+        monitor = mon,
         eval_epoch         = args.eval_epoch,
         eval_initialization = args.eval_initialization,
         eval_metric        = args.eval_metric.split(','),
-        clip_gamma         = args.clip_gamma,
+#        clip_gamma         = args.clip_gamma,
         batch_end_callback = [mx.callback.Speedometer(args.batch_size, args.display)],
-        epoch_end_callback = [checkpoint])
+        epoch_end_callback = [checkpoint],
+        num_epoch          = args.num_epochs,
+        begin_epoch        = args.load_epoch if args.load_epoch else 0)
 
     logging.info('Optimization done.')
