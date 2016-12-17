@@ -198,6 +198,27 @@ class Module(BaseModule):
         # copy the initialized parameters to devices
         self._exec_group.set_params(self._arg_params, self._aux_params)
 
+        # skip invalid arg_arams and aux_params
+        print arg_params.keys()
+        print self.symbol.list_arguments()
+        if arg_params:
+            arg_names = set(self.symbol.list_arguments())
+            arg_names_not_used = set(arg_params.keys()).difference(arg_names)
+            arg_names_reinit = set(arg_names).difference(list(arg_params.keys()) + \
+                ['data', 'softmax_label'])
+            for name in arg_names_not_used:
+                logging.info('Skip parameter arg:%s', name)
+            for name in arg_names_reinit:
+                logging.info('Reinitialize parameter arg:%s', name)
+        if aux_params:
+            aux_names = set(self.symbol.list_auxiliary_states())
+            aux_names_not_used = set(aux_params.keys()).difference(aux_names)
+            aux_names_reinit = set(aux_names).difference(aux_params.keys())
+            for name in aux_names_not_used:
+                logging.info('Skip parameter aux:%s', name)
+            for name in aux_names_reinit:
+                logging.info('Reinitialize parameter aux:%s', name)
+
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None):
         """Bind the symbols to construct executors. This is necessary before one
