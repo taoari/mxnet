@@ -199,8 +199,6 @@ class Module(BaseModule):
         self._exec_group.set_params(self._arg_params, self._aux_params)
 
         # skip invalid arg_arams and aux_params
-        print arg_params.keys()
-        print self.symbol.list_arguments()
         if arg_params:
             arg_names = set(self.symbol.list_arguments())
             arg_names_not_used = set(arg_params.keys()).difference(arg_names)
