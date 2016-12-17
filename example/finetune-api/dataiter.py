@@ -190,7 +190,10 @@ class BaseRecordIter(mx.io.DataIter):
         self.batch_size = batch_size
         self.compressed = compressed
 
-        self.record = mx.recordio.MXRecordIO(os.path.abspath(path_imgrec), 'r')
+        if path_imgrec:
+            self.record = mx.recordio.MXRecordIO(os.path.abspath(path_imgrec), 'r')
+        else:
+            self.record = None
         self._data = None
 
     @property
@@ -215,6 +218,7 @@ class BaseRecordIter(mx.io.DataIter):
         return True
 
     def _aug_img(self, img):
+        '''Called inside _parse_data_label.'''
         return img
 
     def _parse_data_label(self, _data):
@@ -317,6 +321,7 @@ def _aug_img(img, data_shape, random_mirror=False, random_crop=False, mean_value
     min_size=0, max_size=0, random_aspect_ratio=0.0,
     random_hls=None, lighting_pca_noise=0.0):
     # assume img RGB float32 (H,W,C)
+    # data_shape is in (C,H,W)
     # pad
     if pad > 0:
         img = cv2.copyMakeBorder(img,pad,pad,pad,pad,cv2.BORDER_REFLECT_101)
@@ -473,6 +478,16 @@ class RecordSimpleAugmentationIter(RecordIter):
             label = [o[1] for o in out]
         return data, label
 
+    def _aug_img(self, img):
+        '''Not being called inside _parse_data_label, only for debugging.'''
+        with warnings.catch_warnings():
+            warnings.simplefilter("once")
+            warnings.warn('_aug_img should only be called for debugging')
+        return _aug_img(img, self.data_shape, self.random_mirror, self.random_crop,
+                        self.mean_values, self.scale, self.pad,
+                        self.min_size, self.max_size, self.random_aspect_ratio,
+                        self.random_hls, self.lighting_pca_noise)
+
 def test_aug_img():
     # mean_values
     rec = RecordSimpleAugmentationIter('',(3,32,32),10, mean_values=[1,1,1])
@@ -485,6 +500,7 @@ def test_aug_img():
     assert rec._aug_img(np.ones((32,32,3))).shape == (40,40,3)
 
     def _aug_img(self, img):
+        # same code, but remove random crop
         # assume img RGB float32 (H,W,C)
         # pad
         if self.pad > 0:
