@@ -11,6 +11,7 @@ Training Examples
 ### Train on the MNIST dataset (MLP)
 
 ```
+# reference validation accuracy: 0.973658
 train_mnist.py --solver mnist_mlp.yml --gpus 0
 ```
 
@@ -46,6 +47,7 @@ initializer: msra
 ### Train on the MNIST dataset (LeNet)
 
 ```
+# reference validation accuracy: 0.989784
 train_mnist.py --solver mnist_lenet.yml --gpus 0
 ```
 
@@ -81,6 +83,7 @@ initializer: msra
 ### Train on the Cifar10 dataset
 
 ```
+# reference validation accuracy: 0.881210
 train_cifar10.py --solver solver_8.yml --gpus 0
 ```
 
@@ -142,6 +145,8 @@ batch_size: 256
 # mean_values: 123,117,104 # BatchNorm to accumulate mean and var
 min_size: 256 # min_size and max_size for scale augmentation
 max_size: 480
+# random_aspect_ratio: 0.25 # aspect ratio augmentation
+# random_hls: 0.4 # color augmentation
 
 lr: 0.1
 lr_factor: 0.1
