@@ -55,8 +55,9 @@ def get_initializer(initializer):
     ----------
     initializer : str or list of tuples
         key to construct the initializer. str for single initializer and list of
-        tupes for mixed initializer. E.g. "msra" or "[('.*weight', 'msra'),
-        ('.*relu_gamma', 'const0.0')]"
+        tuples for mixed initializer. E.g. "msra", [('.*weight', 'msra'),
+        ('.*relu_gamma', 'const0.0')], or [('conv1_weight', 'normal0.0001'),
+        ('conv[23]_weight', 'normal0.01'), ('ip[12]_weight', 'normal0.1')].
     """
 
     def get_initializer_from_string(key):
