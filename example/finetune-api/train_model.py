@@ -1,7 +1,6 @@
 import find_mxnet
 import mxnet as mx
 import logging
-import os
 import numpy as np
 
 def monitor_stats(d):
@@ -23,75 +22,6 @@ def load_params_from_file(fname):
         else:
             raise ValueError("Invalid param file " + fname)
     return arg_params, aux_params
-
-class ConstantInitializer(mx.initializer.Initializer):
-    def __init__(self, value=0.0):
-        self.value = value
-
-    def __call__(self, name, arr):
-        """Override () function to do Initialization
-
-        Parameters
-        ----------
-        name : str
-            name of corrosponding ndarray
-
-        arr : NDArray
-            ndarray to be Initialized
-        """
-        if not isinstance(name, mx.base.string_types):
-            raise TypeError('name must be string')
-        if not isinstance(arr, mx.nd.NDArray):
-            raise TypeError('arr must be NDArray')
-
-        logging.info('Init (Constant) %s with value %s', name, self.value)
-        arr[:] = self.value
-
-def get_initializer(initializer):
-    """
-    Create initializer from a string or list of tuples.
-
-    Parameters
-    ----------
-    initializer : str or list of tuples
-        key to construct the initializer. str for single initializer and list of
-        tuples for mixed initializer. E.g. "msra", [('.*weight', 'msra'),
-        ('.*relu_gamma', 'const0.0')], or [('conv1_weight', 'normal0.0001'),
-        ('conv[23]_weight', 'normal0.01'), ('ip[12]_weight', 'normal0.1')].
-    """
-
-    def get_initializer_from_string(key):
-        # 'xavier', 'msra', 'default'
-        if key == 'xavier':
-            return mx.init.Xavier(factor_type="in", magnitude=3.0)
-        elif key == 'xavier-gaussian':
-            return mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=1.0)
-        elif key == 'msra':
-            return mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2.0)
-        elif key == 'default':
-            return mx.init.Xavier(factor_type="in", magnitude=2.34)
-        # 'normal', 'uniform', 'const'
-        elif key.startswith('normal'):
-            return mx.init.Normal(sigma=float(key[len('normal'):]))
-        elif key.startswith('uniform'):
-            return mx.init.uniform(scale=float(key[len('uniform'):]))
-        elif key.startswith('const'):
-            return ConstantInitializer(value=float(key[len('const'):]))
-        else:
-            raise ValueError('Invalid initializer: %s' % key)
-
-    if initializer in ['xavier', 'xavier-gaussian', 'msra', 'default']:
-        # single initializer
-        initializer_inst = get_initializer_from_string(initializer)
-    else:
-        # mixed initializer
-        from collections import OrderedDict
-        initializer = OrderedDict(initializer)
-        keys = initializer.keys()
-        patterns = keys + ['.*']
-        initializers = [get_initializer_from_string(initializer[k]) for k in keys] + [mx.initializer.Initializer()]
-        initializer_inst = mx.initializer.Mixed(patterns, initializers)
-    return initializer_inst
 
 def init_logger(log_file, head='%(asctime)-15s] %(message)s'):
     logger = logging.getLogger()
@@ -211,7 +141,7 @@ def fit(args, network, data_loader):
     # initializer
     if not args.initializer in ['xavier', 'xavier-gaussian', 'msra', 'default']:
         args.initializer = eval(args.initializer)
-    initializer = get_initializer(args.initializer)
+    initializer = mx.initializer.get_initializer(args.initializer)
 
     # monitor
     if args.monitor:
