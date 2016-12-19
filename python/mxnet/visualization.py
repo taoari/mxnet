@@ -48,7 +48,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         def printf(msg):
             STR_LINES.append(msg)
     else:
-        printf = print_function
+        printf = print
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be Symbol")
     show_shape = False
