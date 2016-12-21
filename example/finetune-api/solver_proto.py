@@ -114,7 +114,8 @@ def proto_parser():
                         help='clip gamma of prelu into [0,1]')
     parser.add_argument('--num-thread', type=int, default=0,
                         help='multithreading for data processing (decoding + aug): 0, sequential; >=1 multithreading')
-
+    parser.add_argument('--sleep', type=int, default=0,
+                        help='sleep time in seconds after each batch')
     return parser
 
 def dict_to_arg_list(params):

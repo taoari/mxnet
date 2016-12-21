@@ -3,6 +3,18 @@ import mxnet as mx
 import logging
 import numpy as np
 
+class Sleep(object):
+    """Sleep in seconds
+    """
+    def __init__(self, seconds):
+        self.seconds = seconds
+
+    def __call__(self, param):
+        """Callback to Show speed."""
+        import time
+        time.sleep(self.seconds)
+        logging.info('Slept for %s seconds.' % self.seconds)
+
 def monitor_stats(d):
     dd = d.asnumpy()
     stats = mx.nd.zeros((4,), d.context)
@@ -175,6 +187,10 @@ def fit(args, network, data_loader):
             'begin_num_update': model_args['begin_num_update'] if 'begin_num_update' in model_args else 0,
         })
 
+    batch_end_callback = [mx.callback.Speedometer(args.batch_size, args.display)]
+    if args.sleep > 0:
+        batch_end_callback.append(Sleep(args.sleep))
+
     mod.fit(
         train_data          = train,
         eval_data           = val,
@@ -183,7 +199,7 @@ def fit(args, network, data_loader):
         eval_initialization = args.eval_initialization,
         eval_metric         = args.eval_metric.split(','),
 #        clip_gamma          = args.clip_gamma,
-        batch_end_callback  = [mx.callback.Speedometer(args.batch_size, args.display)],
+        batch_end_callback  = batch_end_callback,
         epoch_end_callback  = [checkpoint],
         num_epoch           = args.num_epochs,
         begin_epoch         = args.load_epoch if args.load_epoch else 0)
