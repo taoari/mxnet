@@ -72,8 +72,11 @@ def fit(args, network, data_loader):
     # data
     (train, val) = data_loader(args, kv)
 
-    # logging network summary
-    logging.info('\n'+mx.viz.print_summary(network, shape=dict(train.provide_data), return_str=True))
+    try:
+        # logging network summary
+        logging.info('\n'+mx.viz.print_summary(network, shape=dict(train.provide_data), return_str=True))
+    except Exception:
+        pass
 
     # epoch_size (for begin_num_update and lr_scheduler step)
     model_args = {}
