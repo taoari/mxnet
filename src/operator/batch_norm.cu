@@ -12,11 +12,13 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<gpu>(BatchNormParam param) {
-#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
-  return new CuDNNBatchNormOp(param);
-#else
+  // disable cudnn_batch_norm
   return new BatchNormOp<gpu>(param);
-#endif
+// #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
+//   return new CuDNNBatchNormOp(param);
+// #else
+//   return new BatchNormOp<gpu>(param);
+// #endif
 }
 
 }  // namespace op
