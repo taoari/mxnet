@@ -163,17 +163,30 @@ def fit(args, network, data_loader):
         aux_params          = model_args['aux_params'],
         allow_missing       = True)
 
-    mod.init_optimizer(
-        kvstore             = kv,
-        optimizer           = args.optimizer,
-        optimizer_params    = {
-            'learning_rate':    args.lr,
-            'momentum':         args.momentum,
-            'wd':               args.wd,
-            'lr_scheduler':     model_args['lr_scheduler'],
-            'clip_gradient':    model_args['clip_gradient'],
-            'begin_num_update': model_args['begin_num_update'] if 'begin_num_update' in model_args else 0,
-        })
+    if args.optimizer in ['sgd', 'nag']:
+        mod.init_optimizer(
+            kvstore             = kv,
+            optimizer           = args.optimizer,
+            optimizer_params    = {
+                'learning_rate':    args.lr,
+                'momentum':         args.momentum,
+                'wd':               args.wd,
+                'lr_scheduler':     model_args['lr_scheduler'],
+                'clip_gradient':    model_args['clip_gradient'],
+                'begin_num_update': model_args['begin_num_update'] if 'begin_num_update' in model_args else 0,
+            })
+    else:
+        # no momentum
+        mod.init_optimizer(
+            kvstore             = kv,
+            optimizer           = args.optimizer,
+            optimizer_params    = {
+                'learning_rate':    args.lr,
+                'wd':               args.wd,
+                'lr_scheduler':     model_args['lr_scheduler'],
+                'clip_gradient':    model_args['clip_gradient'],
+                'begin_num_update': model_args['begin_num_update'] if 'begin_num_update' in model_args else 0,
+            })
 
     mod.fit(
         train_data          = train,
